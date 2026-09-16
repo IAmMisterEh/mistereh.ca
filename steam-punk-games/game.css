@@ -433,18 +433,34 @@ body.steampunk-theme {
 }
 
 /* DESKTOP OPTIMIZATION - WIDE SCREENS USE SPACIOUS LAYOUT */
-@media (min-width: 1200px) {
+@media (min-width: 1400px) { /* Increased from 1200px to prevent overflow on standard desktops */
     .steam-panel {
-        max-width: 900px; /* Expand game width on large screens */
+        max-width: 950px; /* Expand game width on large screens */
     }
     
     .clock-face {
-        width: 320px; /* Bigger clock on desktop */
+        width: 320px; /* Bigger clock on very wide screens */
         height: 320px;
     }
     
     .word-glow {
         font-size: 2.3rem;
+    }
+}
+
+/* MEDIUM DESKTOP - Compact but spacious */
+@media (min-width: 1000px) and (max-width: 1399px) {
+    .steam-panel {
+        max-width: 850px;
+    }
+    
+    .clock-face {
+        width: 300px; /* Medium clock size */
+        height: 300px;
+    }
+    
+    .word-glow {
+        font-size: 2.1rem;
     }
 }
 
