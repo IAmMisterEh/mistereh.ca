@@ -17,7 +17,7 @@ class ClockworkWords {
             gameLoopId: null,
             lastTime: 0,
             wordsTypedThisLevel: 0,
-            maxWordsPerLevel: 10
+            levelCompleteThreshold: 10
         };
 
         // PROGRESSIVE DIFFICULTY WORD BANKS
@@ -311,10 +311,31 @@ class ClockworkWords {
         // Progress tracking
         this.state.wordsTypedThisLevel++;
 
-        // Next word after delay
-        setTimeout(() => {
-            this.generateNewWord();
-        }, 800);
+        // Check if level complete (10 words)
+        if (this.state.wordsTypedThisLevel >= this.state.levelCompleteThreshold) {
+            if (this.state.level === 3) {
+                // Max level reached - end game with victory
+                setTimeout(() => {
+                    this.endGame(true);
+                }, 1000);
+            } else {
+                // Advance to next level
+                const currentScore = this.state.score;
+                this.state.level++;
+                this.state.timeRemaining = 30 + (this.state.level - 1) * 5;
+                
+                // Show level up message
+                this.elements.feedback.textContent = `LEVEL UP! Now at Level ${this.state.level}`;
+                setTimeout(() => {
+                    this.generateNewWord();
+                }, 800);
+            }
+        } else {
+            // Continue with next word
+            setTimeout(() => {
+                this.generateNewWord();
+            }, 800);
+        }
 
         this.updateUI();
     }
