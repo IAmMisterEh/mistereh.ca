@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clockwork Words - Typing Mastery Prototype</title>
+    <style>
+        /* Base styling for prototype */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #1a1614 0%, #2a221e 50%, #1a1614 100%);
+            color: #f5e6c8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .prototype-container {
+            max-width: 900px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #b89e6c;
+            font-size: 2rem;
+        }
+        
+        /* Prototype demo area */
+        .demo-section {
+            background: #2d2520;
+            border: 3px solid #b89e6c;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 0 20px rgba(184, 158, 108, 0.3);
+        }
+        
+        .demo-title {
+            font-size: 1.3rem;
+            color: #b89e6c;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #b89e6c;
+            padding-bottom: 10px;
+        }
+        
+        /* Demo 1: Word List */
+        .word-list-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .word-card {
+            background: rgba(61, 40, 23, 0.8);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #b89e6c;
+            text-align: center;
+            font-family: monospace;
+        }
+        
+        .word-card.home-row {
+            border-left: 3px solid #4a90e2; /* Blue for left hand */
+        }
+        
+        .word-card.right-hand {
+            border-left: 3px solid #ff8c00; /* Orange for right hand */
+        }
+        
+        /* Demo 2: Unlock System */
+        .unlock-status {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .level-badge {
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .level-badge.unlocked {
+            background: linear-gradient(135deg, #4a90e2, #2d2520);
+            color: white;
+        }
+        
+        .level-badge.locked {
+            background: rgba(61, 40, 23, 0.5);
+            color: #888;
+            border: 2px dashed #666;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #3d3d3d;
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ff8c00);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        /* Demo 3: Typing Interaction */
+        .typing-demo {
+            margin-top: 20px;
+        }
+        
+        .typing-display {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .word-box {
+            font-size: 2rem;
+            color: #b89e6c;
+            letter-spacing: 3px;
+            padding: 15px 30px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 12px;
+            border: 2px solid #b89e6c;
+            min-height: 70px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .input-box {
+            font-size: 1.5rem;
+            padding: 12px 20px;
+            width: 300px;
+            max-width: 90%;
+            background: rgba(61, 40, 23, 0.8);
+            border: 2px solid #b89e6c;
+            border-radius: 8px;
+            color: #f5e6c8;
+            text-align: center;
+            font-family: monospace;
+        }
+        
+        .input-box:focus {
+            outline: none;
+            border-color: #ffd700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+        }
+        
+        /* Virtual Keyboard */
+        .keyboard-display {
+            display: grid;
+            grid-template-rows: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        
+        .row {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .key {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: #3d3d3d;
+            color: #666;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s ease;
+            cursor: not-allowed;
+        }
+        
+        .key.unlocked {
+            background: #4a90e2;
+            color: white;
+            box-shadow: 0 0 10px rgba(74, 144, 226, 0.5);
+            cursor: pointer;
+        }
+        
+        .key.active {
+            animation: pulse-active 0.5s infinite;
+            background: #ffd700;
+            color: black;
+        }
+        
+        @keyframes pulse-active {
+            0%, 100% { box-shadow: 0 0 10px #ffd700; }
+            50% { box-shadow: 0 0 20px #ffd700; }
+        }
+        
+        .key.typed {
+            opacity: 0.5;
+            text-decoration: line-through;
+            background: #666 !important;
+            color: #aaa !important;
+        }
+        
+        /* Demo Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            font-size: 1rem;
+            border: 2px solid #b89e6c;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #8b4513, #2d2520);
+            color: #f5e6c8;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .btn:hover {
+            background: linear-gradient(135deg, #b89e6c, #8b4513);
+        }
+        
+        /* Score Display */
+        .score-display {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .current-score {
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 2rem;
+        }
+        
+        /* Responsive */
+        @media (max-width: 600px) {
+            .word-list-demo {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .keyboard-display {
+                transform: scale(0.8);
+                margin-top: -10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="prototype-container">
+        <h1>⚙️ Clockwork Words - Typing Mastery Prototype ⌨️</h1>
+        
+        <!-- Demo 1: Word List Showcase -->
+        <div class="demo-section">
+            <div class="demo-title">📝 Level 1: Home Row Words (Always Available)</div>
+            <p style="margin-bottom: 15px; color: #888;">Real words using ONLY home row letters (a s d f g h j k l ;)</p>
+            
+            <div class="word-list-demo" id="wordListDemo">
+                <!-- Generated by JS -->
+            </div>
+        </div>
+        
+        <!-- Demo 2: Unlock System Visualization -->
+        <div class="demo-section">
+            <div class="demo-title">🔓 Progressive Unlock System</div>
+            
+            <div class="score-display">
+                Total Score: <span id="totalScoreDisplay" class="current-score">0</span> points<br>
+                <small style="color: #888;">Current Level: <span id="levelDisplay">1</span></small>
+            </div>
+            
+            <div class="unlock-status">
+                <div class="level-badge unlocked" title="Home Row - Always Available">
+                    <span>🔓 Home Row Master</span>
+                    <span>✅ Unlocked</span>
+                </div>
+                
+                <div class="level-badge locked" id="level2Badge">
+                    <span>🔒 Top Row Explorer</span>
+                    <span>Unlock at 100 pts</span>
+                </div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="level2Progress"></div>
+                </div>
+                
+                <div class="level-badge locked" id="level3Badge">
+                    <span>🔒 Bottom Row Master</span>
+                    <span>Unlock at 250 pts</span>
+                </div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="level3Progress"></div>
+                </div>
+                
+                <div class="level-badge locked" id="level4Badge">
+                    <span>🔒 Keyboard Commander</span>
+                    <span>Unlock at 500 pts</span>
+                </div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="level4Progress"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Demo 3: Interactive Typing Test -->
+        <div class="demo-section">
+            <div class="demo-title">⌨️ Try the Prototype</div>
+            
+            <div class="typing-demo">
+                <div class="typing-display">
+                    <div id="wordBox" class="word-box">dad</div>
+                    <input type="text" id="typoInput" class="input-box" placeholder="Type the word..." autocomplete="off" autocapitalize="off" autofocus>
+                </div>
+                
+                <!-- Virtual Keyboard Display -->
+                <div class="keyboard-display" id="virtualKeyboard">
+                    <!-- Generated by JS -->
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="nextWord()">Next Word</button>
+                <button class="btn" onclick="resetProgress()">Reset Progress</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // === HOME ROW WORD LIST ===
+        const homeRowWords = [
+            'dad', 'sad', 'mad', 'lad', 
+            'gas', 'tag', 'gag', 'saga', 'gala',
+            'ask', 'task', 'mask',
+            'fast', 'last', 'cast', 'mast',
+            'sea', 'tea', 'pee', 'lee', 'bee',
+            'daddy'
+        ];
+        
+        // === STATE MANAGEMENT ===
+        let gameState = {
+            totalScore: 0,
+            currentWord: '',
+            unlockedLevels: 1,
+            scoreToNextUnlock: 100
+        };
+        
+        // === INITIALIZATION ===
+        document.addEventListener('DOMContentLoaded', () => {
+            renderWordList();
+            renderVirtualKeyboard();
+            generateNewWord();
+            updateUI();
+            
+            // Bind input event
+            document.getElementById('typoInput').addEventListener('input', handleTyping);
+        });
+        
+        // === RENDER WORD LIST ===
+        function renderWordList() {
+            const container = document.getElementById('wordListDemo');
+            container.innerHTML = '';
+            
+            homeRowWords.forEach(word => {
+                const card = document.createElement('div');
+                card.className = 'word-card';
+                
+                // Color code by hand position
+                if (word.includes('a') || word.includes('s') || word.includes('d') || word.includes('f')) {
+                    card.classList.add('left-hand');
+                } else if (word.includes('j') || word.includes('k') || word.includes('l')) {
+                    card.classList.add('right-hand');
+                }
+                
+                card.innerHTML = `<strong>${word.toUpperCase()}</strong>`;
+                container.appendChild(card);
+            });
+        }
+        
+        // === RENDER VIRTUAL KEYBOARD ===
+        function renderVirtualKeyboard() {
+            const keyboard = document.getElementById('virtualKeyboard');
+            keyboard.innerHTML = '';
+            
+            // Home Row Keys (unlocked)
+            const homeRowKeys = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';'];
+            const row1 = document.createElement('div');
+            row1.className = 'row';
+            row1.dataset.level = 1;
+            
+            homeRowKeys.forEach(letter => {
+                const key = createKey(letter, true);
+                row1.appendChild(key);
+            });
+            keyboard.appendChild(row1);
+            
+            // Top Row Keys (locked) - Show a few for demo
+            const topRowKeys = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'];
+            const row2 = document.createElement('div');
+            row2.className = 'row locked';
+            row2.dataset.level = 2;
+            
+            topRowKeys.forEach(letter => {
+                const key = createKey(letter, false);
+                row2.appendChild(key);
+            });
+            keyboard.appendChild(row2);
+            
+            // Bottom Row Keys (locked) - Show a few for demo
+            const bottomRowKeys = ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/'];
+            const row3 = document.createElement('div');
+            row3.className = 'row locked';
+            row3.dataset.level = 3;
+            
+            bottomRowKeys.forEach(letter => {
+                const key = createKey(letter, false);
+                row3.appendChild(key);
+            });
+            keyboard.appendChild(row3);
+        }
+        
+        function createKey(letter, unlocked) {
+            const key = document.createElement('button');
+            key.className = `key ${unlocked ? 'unlocked' : 'locked'}`;
+            key.dataset.letter = letter;
+            key.innerHTML = letter.toUpperCase();
+            if (unlocked) {
+                key.title = 'Available (Home Row)';
+            } else {
+                key.title = 'Locked - Needs higher score';
+            }
+            return key;
+        }
+        
+        // === TYPING MECHANIC ===
+        function generateNewWord() {
+            gameState.currentWord = homeRowWords[Math.floor(Math.random() * homeRowWords.length)];
+            
+            const wordBox = document.getElementById('wordBox');
+            wordBox.innerHTML = `<span>${gameState.currentWord.toUpperCase()}</span>`;
+            
+            // Update keyboard
+            updateKeyboardHighlights();
+        }
+        
+        function handleTyping(event) {
+            const typed = event.target.value.toLowerCase();
+            const currentWord = gameState.currentWord;
+            const typedLength = typed.length;
+            
+            // Highlight letters in word box
+            let highlightedText = '';
+            for (let i = 0; i < currentWord.length; i++) {
+                if (i < typedLength) {
+                    if (typed[i] === currentWord[i]) {
+                        highlightedText += `<span style="color: #ffd700; text-decoration: underline;">${currentWord[i].toUpperCase()}</span>`;
+                    } else {
+                        highlightedText += `<span style="color: #ff4444; text-decoration: line-through;">${currentWord[i].toUpperCase()}</span>`;
+                    }
+                } else {
+                    highlightedText += `${currentWord[i].toUpperCase()}`;
+                }
+            }
+            
+            document.getElementById('wordBox').innerHTML = highlightedText;
+            
+            // Update keyboard highlights
+            updateKeyboardHighlights();
+            
+            // Check if word complete
+            if (typed === currentWord) {
+                handleCorrectWord();
+            }
+        }
+        
+        function updateKeyboardHighlights() {
+            const typed = document.getElementById('typoInput').value.toLowerCase();
+            const keys = document.querySelectorAll('.key');
+            
+            keys.forEach(key => {
+                key.classList.remove('active', 'typed');
+                
+                const letter = key.dataset.letter;
+                if (typed.includes(letter)) {
+                    const position = typed.indexOf(letter);
+                    if (position < typed.length) {
+                        if (position >= gameState.currentWord.indexOf(letter)) {
+                            key.classList.add('active');
+                        } else {
+                            key.classList.add('typed');
+                        }
+                    }
+                }
+            });
+        }
+        
+        function handleCorrectWord() {
+            // Calculate score based on word length and speed
+            const baseScore = gameState.currentWord.length * 10;
+            const timeBonus = 5; // Simplified for prototype
+            
+            const totalPoints = baseScore + timeBonus;
+            gameState.totalScore += totalPoints;
+            
+            // Update UI
+            updateUI();
+            
+            // Check unlock conditions
+            checkUnlocks();
+            
+            // Generate next word after delay
+            setTimeout(() => {
+                generateNewWord();
+                document.getElementById('typoInput').value = '';
+            }, 800);
+        }
+        
+        function checkUnlocks() {
+            if (gameState.totalScore >= 100 && gameState.unlockedLevels < 2) {
+                unlockLevel(2, 'Top Row Explorer');
+            } else if (gameState.totalScore >= 250 && gameState.unlockedLevels < 3) {
+                unlockLevel(3, 'Bottom Row Master');
+            } else if (gameState.totalScore >= 500 && gameState.unlockedLevels < 4) {
+                unlockLevel(4, 'Keyboard Commander');
+            }
+        }
+        
+        function unlockLevel(level, name) {
+            gameState.unlockedLevels = level;
+            alert(`🎉 CONGRATULATIONS!\n\nYou've unlocked: ${name}!\nMore keys are now available!`);
+            
+            // Update keyboard to show newly unlocked keys
+            const rows = document.querySelectorAll('.row');
+            if (rows[level - 1]) {
+                rows[level - 1].classList.remove('locked');
+                const keys = rows[level - 1].querySelectorAll('.key');
+                keys.forEach(key => key.classList.replace('locked', 'unlocked'));
+            }
+            
+            updateUI();
+        }
+        
+        function updateUI() {
+            // Update score display
+            document.getElementById('totalScoreDisplay').textContent = gameState.totalScore;
+            document.getElementById('levelDisplay').textContent = gameState.unlockedLevels;
+            
+            // Update progress bars
+            const level2Progress = Math.min(100, (gameState.totalScore / 100) * 100);
+            const level3Progress = Math.min(100, ((gameState.totalScore - 100) / 150) * 100);
+            const level4Progress = Math.min(100, ((gameState.totalScore - 250) / 250) * 100;
+            
+            document.getElementById('level2Progress').style.width = `${level2Progress}%`;
+            document.getElementById('level3Progress').style.width = `${Math.max(0, level3Progress)}%`;
+            document.getElementById('level4Progress').style.width = `${Math.max(0, level4Progress)}%`;
+            
+            // Update badge states
+            const level2Badge = document.getElementById('level2Badge');
+            const level3Badge = document.getElementById('level3Badge');
+            const level4Badge = document.getElementById('level4Badge');
+            
+            if (gameState.unlockedLevels >= 2) {
+                level2Badge.classList.replace('locked', 'unlocked');
+                level2Badge.querySelector('span:last-child').textContent = '✅ Unlocked';
+            }
+            
+            if (gameState.unlockedLevels >= 3) {
+                level3Badge.classList.replace('locked', 'unlocked');
+                level3Badge.querySelector('span:last-child').textContent = '✅ Unlocked';
+            }
+            
+            if (gameState.unlockedLevels >= 4) {
+                level4Badge.classList.replace('locked', 'unlocked');
+                level4Badge.querySelector('span:last-child').textContent = '✅ Unlocked';
+            }
+        }
+        
+        function nextWord() {
+            generateNewWord();
+            document.getElementById('typoInput').value = '';
+        }
+        
+        function resetProgress() {
+            gameState.totalScore = 0;
+            gameState.unlockedLevels = 1;
+            updateUI();
+            
+            // Re-lock keyboard rows
+            const rows = document.querySelectorAll('.row');
+            for (let i = 1; i < rows.length; i++) {
+                rows[i].classList.add('locked');
+                const keys = rows[i].querySelectorAll('.key');
+                keys.forEach(key => {
+                    key.classList.remove('unlocked');
+                    key.classList.add('locked');
+                    key.innerHTML = key.dataset.letter.toUpperCase();
+                });
+            }
+            
+            // Reset badges
+            document.getElementById('level2Badge').classList.replace('unlocked', 'locked');
+            document.getElementById('level3Badge').classList.replace('unlocked', 'locked');
+            document.getElementById('level4Badge').classList.replace('unlocked', 'locked');
+        }
+    </script>
+</body>
+</html>
