@@ -310,14 +310,21 @@ class ClockworkWords {
         this.elements.letterTrail.innerHTML = '';
         
         const numLetters = letters.length;
-        const radius = 130;
         const centerX = 160;
         const centerY = 160;
-
+        const maxRadius = 130; // Max distance from center
+        
         this.state.wordDisplayLetters = [];
-
+        
+        // SPIRAL LAYOUT: Letters arranged along an Archimedean spiral
         for (let i = 0; i < numLetters; i++) {
-            const angle = (i / numLetters) * Math.PI * 2;
+            // Spiral parameter: distance increases with letter position
+            const progress = i / Math.max(numLetters - 1, 1); // 0 to 1
+            const radius = progress * maxRadius;
+            
+            // Angle wraps around as we move outward (creates spiral pattern)
+            const angle = progress * Math.PI * 2; // Full circle for first letter
+            
             const x = centerX + radius * Math.cos(angle);
             const y = centerY + radius * Math.sin(angle);
 
@@ -330,6 +337,9 @@ class ClockworkWords {
             // Color-coded: vowels gold, consonants brass
             const isVowel = 'aeiouAEIOU'.includes(letters[i]);
             dot.style.background = isVowel ? '#ffd700' : '#b89e6c';
+            
+            // Visual indicator of position in sequence (1st, 2nd, etc.)
+            dot.title = `Letter ${i + 1} of ${numLetters}`;
 
             this.elements.letterTrail.appendChild(dot);
             this.state.wordDisplayLetters.push(dot);
@@ -343,6 +353,9 @@ class ClockworkWords {
         const currentWord = this.state.currentWord;
         const typedLength = typed.length;
 
+        // Update spiral dots visual feedback
+        this.updateSpiralDots(typed, currentWord);
+
         // Visual feedback on typing progress
         let highlightedText = '';
         
@@ -351,7 +364,7 @@ class ClockworkWords {
                 if (typed[i] === currentWord[i]) {
                     highlightedText += `<span style="color: var(--steam-glow-gold); text-decoration: underline;">${currentWord[i].toUpperCase()}</span>`;
                 } else {
-                    highlightedText += `<span style="color: #ff6b35; text-decoration: line-through;">${currentWord[i].toUpperCase()}</span>`;
+                    highlightedText += `<span style="color: #ff4444; text-decoration: line-through;">${currentWord[i].toUpperCase()}</span>`;
                 }
             } else {
                 highlightedText += `${currentWord[i].toUpperCase()}`;
@@ -359,6 +372,31 @@ class ClockworkWords {
         }
 
         this.elements.wordDisplay.innerHTML = highlightedText;
+    }
+
+    updateSpiralDots(typed, currentWord) {
+        if (!this.state.wordDisplayLetters || this.state.wordDisplayLetters.length === 0) return;
+        
+        const typedLength = typed.length;
+        
+        this.state.wordDisplayLetters.forEach((dot, index) => {
+            if (index < typedLength) {
+                // Letter already typed - dim it
+                dot.style.opacity = '0.4';
+                dot.style.transform = 'scale(0.8)';
+                dot.style.boxShadow = 'none';
+            } else if (index === typedLength) {
+                // Current target letter - pulse to indicate urgency
+                dot.style.opacity = '1';
+                dot.style.transform = 'scale(1.2)';
+                dot.style.boxShadow = '0 0 15px var(--steam-glow-gold)';
+            } else {
+                // Future letters - normal state
+                dot.style.opacity = '1';
+                dot.style.transform = 'scale(1)';
+                dot.style.boxShadow = '0 0 8px rgba(245, 230, 200, 0.8)';
+            }
+        });
     }
 
     validateWord() {
