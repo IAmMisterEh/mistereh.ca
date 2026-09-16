@@ -315,15 +315,18 @@ class ClockworkWords {
         const maxRadius = 130; // Max distance from center
         
         this.state.wordDisplayLetters = [];
+        this.state.spinePoints = []; // Store spiral coordinates for enemy animation
         
-        // SPIRAL LAYOUT: Letters arranged along an Archimedean spiral
+        // SPIRAL LAYOUT: Letters arranged along an expanding spiral path
+        // Each letter is a position on the spiral, not wrapped in circles
         for (let i = 0; i < numLetters; i++) {
-            // Spiral parameter: distance increases with letter position
             const progress = i / Math.max(numLetters - 1, 1); // 0 to 1
+            
+            // Spiral expansion: distance increases faster than before
             const radius = progress * maxRadius;
             
-            // Angle wraps around as we move outward (creates spiral pattern)
-            const angle = progress * Math.PI * 2; // Full circle for first letter
+            // Spiral angle: wraps once per word length for visual clarity
+            const angle = (progress * Math.PI) + (Math.PI / 2); // Start at bottom, go counter-clockwise
             
             const x = centerX + radius * Math.cos(angle);
             const y = centerY + radius * Math.sin(angle);
@@ -338,11 +341,27 @@ class ClockworkWords {
             const isVowel = 'aeiouAEIOU'.includes(letters[i]);
             dot.style.background = isVowel ? '#ffd700' : '#b89e6c';
             
-            // Visual indicator of position in sequence (1st, 2nd, etc.)
-            dot.title = `Letter ${i + 1} of ${numLetters}`;
-
+            // Add data attributes for enemy tracking
+            dot.dataset.letterIndex = i;
+            dot.dataset.isTarget = 'false';
+            
             this.elements.letterTrail.appendChild(dot);
             this.state.wordDisplayLetters.push(dot);
+            this.state.spinePoints.push({x, y});
+        }
+        
+        // Add enemy element at center if it doesn't exist
+        if (!this.elements.enemy) {
+            this.elements.enemy = document.createElement('div');
+            this.elements.enemy.id = 'steam-enemy';
+            this.elements.enemy.style.position = 'absolute';
+            this.elements.enemy.style.width = '20px';
+            this.elements.enemy.style.height = '20px';
+            this.elements.enemy.style.background = '#ff4444';
+            this.elements.enemy.style.borderRadius = '50%';
+            this.elements.enemy.style.boxShadow = '0 0 10px #ff0000, 0 0 20px #ffaa00';
+            this.elements.enemy.style.zIndex = '10';
+            this.elements.letterTrail.appendChild(this.elements.enemy);
         }
     }
 
@@ -379,6 +398,7 @@ class ClockworkWords {
         
         const typedLength = typed.length;
         
+        // Update spiral dots visual feedback
         this.state.wordDisplayLetters.forEach((dot, index) => {
             if (index < typedLength) {
                 // Letter already typed - dim it
@@ -390,13 +410,41 @@ class ClockworkWords {
                 dot.style.opacity = '1';
                 dot.style.transform = 'scale(1.2)';
                 dot.style.boxShadow = '0 0 15px var(--steam-glow-gold)';
+                dot.dataset.isTarget = 'true';
             } else {
                 // Future letters - normal state
                 dot.style.opacity = '1';
                 dot.style.transform = 'scale(1)';
                 dot.style.boxShadow = '0 0 8px rgba(245, 230, 200, 0.8)';
+                dot.dataset.isTarget = 'false';
             }
         });
+        
+        // Move enemy along spiral path
+        this.updateEnemyPosition(typedLength);
+    }
+    
+    updateEnemyPosition(currentLetterIndex) {
+        if (!this.elements.enemy || !this.state.spinePoints || this.state.spinePoints.length === 0) return;
+        
+        const points = this.state.spinePoints;
+        const maxIndex = Math.min(currentLetterIndex, points.length - 1);
+        
+        // Move enemy toward the current target letter position
+        const targetPos = points[maxIndex];
+        
+        // Smooth animation: lerp from current position to target
+        const currentEnemyX = this.elements.enemy.offsetLeft;
+        const currentEnemyY = this.elements.enemy.offsetTop;
+        const targetX = targetPos.x - 10; // Center of enemy (20px size)
+        const targetY = targetPos.y - 10;
+        
+        // Simple lerp for smooth movement (or instant snap for urgency)
+        const lerpedX = currentEnemyX + (targetX - currentEnemyX) * 0.5;
+        const lerpedY = currentEnemyY + (targetY - currentEnemyY) * 0.5;
+        
+        this.elements.enemy.style.left = `${lerpedX}px`;
+        this.elements.enemy.style.top = `${lerpedY}px`;
     }
 
     validateWord() {
