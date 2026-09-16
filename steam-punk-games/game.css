@@ -1,0 +1,444 @@
+/* 
+ * Steampunk Clock Words - CSS Stylesheet
+ * Victorian-era industrial aesthetic with brass, copper, and steam effects
+ */
+
+/* Base theme variables */
+:root {
+    --steam-dark-bg: #1a1614;
+    --steam-panel-bg: #2d2520;
+    --steam-brass-gold: #b89e6c;
+    --steam-copper-brown: #8b4513;
+    --steam-leather-dark: #3d2817;
+    --steam-cream-parchment: #f5e6c8;
+    --steam-gear-metal: #6b5a4a;
+    --steam-steam-white: rgba(200, 200, 200, 0.9);
+    --steam-glow-orange: #ffaa33;
+    --steam-glow-gold: #ffd700;
+    --steam-border-dark: #1a1614;
+    
+    /* Typography */
+    --font-primary: 'Georgia', 'Times New Roman', serif;
+    --font-display: 'Courier New', monospace;
+}
+
+/* Global resets and base styling */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body.steampunk-theme {
+    background: linear-gradient(135deg, var(--steam-dark-bg) 0%, #2a221e 50%, var(--steam-dark-bg) 100%);
+    font-family: var(--font-primary);
+    color: var(--steam-cream-parchment);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow-x: hidden;
+    padding: 20px;
+}
+
+/* Steam panel with metallic border */
+.steam-panel {
+    background: var(--steam-panel-bg);
+    border: 3px solid var(--steam-brass-gold);
+    border-radius: 15px;
+    box-shadow: 
+        0 0 20px rgba(184, 158, 108, 0.3),
+        inset 0 0 30px rgba(0, 0, 0, 0.7);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Corner gear decorations */
+.steam-panel::before,
+.steam-panel::after {
+    content: '';
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border: 3px solid var(--steam-brass-gold);
+    border-radius: 50%;
+    opacity: 0.3;
+}
+
+.steam-panel::before {
+    top: -25px;
+    left: -25px;
+}
+
+.steam-panel::after {
+    bottom: -25px;
+    right: -25px;
+}
+
+/* Header styling */
+.game-header {
+    padding: 30px 20px 20px;
+    text-align: center;
+    border-bottom: 2px solid var(--steam-brass-gold);
+    background: linear-gradient(to bottom, rgba(184, 158, 108, 0.1), transparent);
+}
+
+.game-title {
+    font-size: 2.5rem;
+    color: var(--steam-brass-gold);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8),
+                 0 0 10px var(--steam-glow-orange);
+    margin-bottom: 20px;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+/* Stats bar layout */
+.stats-bar {
+    display: flex;
+    justify-content: space-around;
+    background: rgba(61, 40, 23, 0.5);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid var(--steam-brass-gold);
+}
+
+.stat {
+    font-size: 1.2rem;
+    color: var(--steam-cream-parchment);
+}
+
+.stat-value {
+    color: var(--steam-brass-gold);
+    font-weight: bold;
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+}
+
+/* Main game area */
+.game-area {
+    padding: 30px 20px;
+    position: relative;
+}
+
+/* Clock face container */
+.clock-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 40px;
+}
+
+.clock-face {
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, 
+        var(--steam-brass-gold) 0%, 
+        var(--steam-copper-brown) 30%, 
+        var(--steam-leather-dark) 70%,
+        #1a1614 100%);
+    border-radius: 50%;
+    border: 8px solid var(--steam-brass-gold);
+    position: relative;
+    box-shadow: 
+        0 0 30px rgba(184, 158, 108, 0.6),
+        inset 0 0 20px rgba(0, 0, 0, 0.8);
+}
+
+/* Clock hand indicator */
+.clock-hand {
+    position: absolute;
+    width: 4px;
+    height: 120px;
+    background: var(--steam-brass-gold);
+    left: 50%;
+    top: 20px;
+    transform-origin: bottom center;
+    transform: translateX(-50%) rotate(0deg);
+    border-radius: 2px;
+    box-shadow: 0 0 10px rgba(184, 158, 108, 0.8);
+}
+
+/* Letter trail animation */
+.letter-trail {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.letter-dot {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background: var(--steam-cream-parchment);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: var(--steam-leather-dark);
+    font-size: 1rem;
+    animation: letterPop 0.3s ease-out;
+    box-shadow: 0 0 10px rgba(245, 230, 200, 0.8);
+}
+
+@keyframes letterPop {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Typing input area */
+.typing-container {
+    text-align: center;
+    margin-top: 30px;
+}
+
+.word-glow {
+    font-size: 2.5rem;
+    color: var(--steam-brass-gold);
+    letter-spacing: 8px;
+    padding: 15px 30px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 10px;
+    border: 2px solid var(--steam-brass-gold);
+    box-shadow: 0 0 15px rgba(184, 158, 108, 0.4),
+                inset 0 0 20px rgba(0, 0, 0, 0.8);
+    margin-bottom: 20px;
+    min-height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-shadow: 0 0 10px var(--steam-glow-orange);
+}
+
+.steampunk-input {
+    font-size: 1.5rem;
+    padding: 12px 20px;
+    width: 300px;
+    max-width: 90%;
+    background: rgba(61, 40, 23, 0.8);
+    border: 2px solid var(--steam-brass-gold);
+    border-radius: 8px;
+    color: var(--steam-cream-parchment);
+    text-align: center;
+    font-family: var(--font-display);
+    transition: all 0.3s ease;
+}
+
+.steampunk-input:focus {
+    outline: none;
+    border-color: var(--steam-glow-gold);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+}
+
+.feedback-message {
+    margin-top: 15px;
+    font-size: 1.1rem;
+    min-height: 30px;
+    color: var(--steam-cream-parchment);
+    font-style: italic;
+}
+
+/* Steam effects container */
+.steam-effects {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.steam-particle {
+    position: absolute;
+    background: radial-gradient(circle, 
+        rgba(200, 200, 200, 0.9) 0%, 
+        rgba(150, 150, 150, 0.6) 40%, 
+        transparent 70%);
+    border-radius: 50%;
+    animation: steamRise 3s ease-in infinite;
+    opacity: 0;
+}
+
+@keyframes steamRise {
+    0% { 
+        transform: translateY(100px) scale(0.5); 
+        opacity: 0; 
+    }
+    20% { opacity: 0.8; }
+    80% { opacity: 0.4; }
+    100% { 
+        transform: translateY(-50px) scale(1.2); 
+        opacity: 0; 
+    }
+}
+
+/* Footer controls */
+.game-footer {
+    padding: 20px;
+    border-top: 2px solid var(--steam-brass-gold);
+    background: rgba(61, 40, 23, 0.3);
+}
+
+.progress-container {
+    margin-bottom: 20px;
+}
+
+.progress-label {
+    font-size: 0.9rem;
+    color: var(--steam-cream-parchment);
+    margin-bottom: 8px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 12px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--steam-brass-gold);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, 
+        var(--steam-brass-gold) 0%, 
+        var(--steam-glow-orange) 50%, 
+        var(--steam-copper-brown) 100%);
+    width: 100%;
+    transition: width 0.1s linear;
+    border-radius: 6px;
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.steampunk-button {
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-family: var(--font-primary);
+    border: 2px solid var(--steam-brass-gold);
+    border-radius: 8px;
+    background: linear-gradient(135deg, 
+        var(--steam-copper-brown) 0%, 
+        var(--steam-leather-dark) 100%);
+    color: var(--steam-cream-parchment);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.steampunk-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(184, 158, 108, 0.4);
+    background: linear-gradient(135deg, 
+        var(--steam-brass-gold) 0%, 
+        var(--steam-copper-brown) 100%);
+}
+
+.steampunk-button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.steampunk-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.primary {
+    background: linear-gradient(135deg, 
+        var(--steam-brass-gold) 0%, 
+        var(--steam-copper-brown) 100%);
+}
+
+.secondary {
+    background: rgba(61, 40, 23, 0.6);
+}
+
+/* Overlay for game over / level complete */
+.game-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(26, 22, 20, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.game-overlay.hidden {
+    display: none;
+}
+
+.overlay-content {
+    text-align: center;
+    padding: 40px;
+    max-width: 500px;
+}
+
+.overlay-title {
+    font-size: 2rem;
+    color: var(--steam-brass-gold);
+    margin-bottom: 20px;
+    text-shadow: 0 0 15px rgba(184, 158, 108, 0.6);
+}
+
+.overlay-message {
+    font-size: 1.2rem;
+    color: var(--steam-cream-parchment);
+    margin-bottom: 30px;
+    line-height: 1.6;
+}
+
+.overlay-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-bottom: 30px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+    .clock-face {
+        width: 280px;
+        height: 280px;
+    }
+    
+    .game-title {
+        font-size: 1.8rem;
+    }
+    
+    .word-glow {
+        font-size: 1.8rem;
+        letter-spacing: 4px;
+    }
+    
+    .steampunk-button {
+        padding: 10px 18px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Steam particle generation styles */
+.steam-container {
+    position: fixed;
+    bottom: -50px;
+    left: 0;
+    width: 100%;
+    height: 50px;
+    pointer-events: none;
+    overflow: hidden;
+}

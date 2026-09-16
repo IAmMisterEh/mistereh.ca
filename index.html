@@ -3,13 +3,105 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MisterEh</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>MisterEh Classroom Tools</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background-color: #0b0e14;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.1) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.1) 0px, transparent 50%);
+    }
+    .glow-card:hover {
+      box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.3);
+    }
+  </style>
 </head>
-<body>
-  <main>
-    <h1>mistereh.ca</h1>
-    <p>Coming soon.</p>
+<body class="text-slate-100 font-sans min-h-screen flex flex-col justify-between">
+
+  <!-- Header -->
+  <header class="border-b border-emerald-500/20 bg-slate-900/40 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">🧭</span>
+        <span class="text-xl font-bold tracking-wider text-emerald-400">mistereh.ca</span>
+      </div>
+      <span class="text-sm text-slate-400 font-medium">Classroom Hub</span>
+    </div>
+  </header>
+
+  <!-- Hero & Main -->
+  <main class="max-w-4xl mx-auto px-6 py-12 flex-grow flex flex-col justify-center items-center">
+    <div class="text-center mb-12">
+      <h1 class="text-4xl md:text-5xl font-black tracking-tight mb-4 bg-gradient-to-r from-emerald-400 to-blue-500 bg-clip-text text-transparent">
+        Interactive Classroom Tools
+      </h1>
+      <p class="text-slate-400 text-lg md:text-xl max-w-xl mx-auto">
+        Fun, educational games and helpful utilities built for students and teachers.
+      </p>
+    </div>
+
+    <!-- Cards Grid -->
+    <div class="grid md:grid-cols-3 gap-6 w-full">
+      
+      <!-- Electricity Game -->
+      <a href="/electricity-game.html" class="glow-card block bg-slate-900/60 border border-slate-800 hover:border-emerald-500/50 rounded-2xl p-6 transition-all duration-300 transform hover:-translate-y-1 flex flex-col h-full justify-between">
+        <div>
+          <div class="w-12 h-12 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-center text-2xl mb-4 text-emerald-400">
+            ⚡
+          </div>
+          <h2 class="text-xl font-bold text-slate-100 mb-2">Electricity Hub</h2>
+          <p class="text-slate-400 text-sm leading-relaxed mb-4">
+            Learn and test Grade 6 electricity concepts through word searches, connection matching, syntax labs, and morphology.
+          </p>
+        </div>
+        <span class="text-xs font-semibold text-emerald-400 flex items-center gap-1 group">
+          Play Game <span class="transition-transform group-hover:translate-x-1">→</span>
+        </span>
+      </a>
+
+      <!-- Flight Game -->
+      <a href="/flight-game.html" class="glow-card block bg-slate-900/60 border border-slate-800 hover:border-blue-500/50 rounded-2xl p-6 transition-all duration-300 transform hover:-translate-y-1 flex flex-col h-full justify-between">
+        <div>
+          <div class="w-12 h-12 bg-blue-500/10 border border-blue-500/30 rounded-xl flex items-center justify-center text-2xl mb-4 text-blue-400">
+            ✈️
+          </div>
+          <h2 class="text-xl font-bold text-slate-100 mb-2">Flight Game v2</h2>
+          <p class="text-slate-400 text-sm leading-relaxed mb-4">
+            Take to the skies and test your piloting skills in this interactive physics-based simulation.
+          </p>
+        </div>
+        <span class="text-xs font-semibold text-blue-400 flex items-center gap-1 group">
+          Play Game <span class="transition-transform group-hover:translate-x-1">→</span>
+        </span>
+      </a>
+
+      <!-- Comment Generator -->
+      <a href="/comment-generator.html" class="glow-card block bg-slate-900/60 border border-slate-800 hover:border-purple-500/50 rounded-2xl p-6 transition-all duration-300 transform hover:-translate-y-1 flex flex-col h-full justify-between">
+        <div>
+          <div class="w-12 h-12 bg-purple-500/10 border border-purple-500/30 rounded-xl flex items-center justify-center text-2xl mb-4 text-purple-400">
+            ✍️
+          </div>
+          <h2 class="text-xl font-bold text-slate-100 mb-2">Comment Generator</h2>
+          <p class="text-slate-400 text-sm leading-relaxed mb-4">
+            A powerful utility for Ontario teachers to craft personalized and comprehensive Learning Skills report card comments.
+          </p>
+        </div>
+        <span class="text-xs font-semibold text-purple-400 flex items-center gap-1 group">
+          Open Generator (🔒 Protected) <span class="transition-transform group-hover:translate-x-1">→</span>
+        </span>
+      </a>
+
+    </div>
   </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800/60 bg-slate-950/40 py-6 text-center text-xs text-slate-500">
+    <div class="max-w-6xl mx-auto px-6">
+      <p>&copy; 2026 mistereh.ca &bull; Built with pride for classrooms</p>
+    </div>
+  </footer>
+
 </body>
 </html>
