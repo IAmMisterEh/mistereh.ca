@@ -26,15 +26,37 @@ class ClockworkWords {
 
         // TYPING MASTERY WORD BANKS (Progressive Unlock)
         
-        // Level 1: Home Row Only (ALWAYS AVAILABLE)
-        this.homeRowWords = [
+        // REAL HOME-ROW WORDS (Priority: Vocabulary First)
+        const realHomeRowWords = [
             'dad', 'sad', 'mad', 'lad', 
-            'gas', 'tag', 'gag', 'saga', 'gala',
-            'ask', 'task', 'mask',
-            'fast', 'last', 'cast', 'mast',
+            'gas', 'tag', 'gag', 'ask',
             'sea', 'tea', 'pee', 'lee', 'bee',
-            'sally', 'daddy'
+            'fast', 'last', 'cast', 'mast',
+            'lass', 'saga', 'gala', 'gaga',
+            'dada', 'mask', 'task', 'daddy'
         ];
+
+        // HOME-ROW GIBBERISH CODES (For Muscle Memory Drills)
+        const homeRowGibberish = [
+            // Simple patterns
+            'as', 'sa', 'ad', 'da', 'fs', 'sf', 'gs', 'sg',
+            'aaaa', 'ssss', 'dddd', 'ffff', 'gggg', 'hhhh',
+            'adas', 'safs', 'gags', 'tagg', 'fask', 'lask',
+            
+            // Complex patterns
+            'asdasd', 'fsfsfs', 'gsgsgs', 'lklklk', 'jkjkjk',
+            'dadada', 'sadads', 'gasag', 'lsgsl', 'faskas',
+            'tasksk', 'maskas', 'lassal', 'gallag',
+            
+            // Full sweeps
+            'asdfghjkl;', 'lkjhgfdsa;'
+        ];
+
+        // Level 1: Home Row Only (ALWAYS AVAILABLE)
+        this.homeRowWords = [...realHomeRowWords, ...homeRowGibberish];
+        
+        // Store real words separately for bonus scoring
+        this.realHomeRowWords = new Set(realHomeRowWords);
 
         // Level 2: Home Row + Top Row (Unlocks at 100 points)
         this.topRowWords = [
@@ -361,9 +383,25 @@ class ClockworkWords {
     }
 
     onCorrectWord(word) {
+        // Calculate base score
         const baseScore = word.length * 10;
         const timeBonus = Math.floor(this.state.timeRemaining) * 2;
-        const totalPoints = baseScore + timeBonus;
+        
+        // Check if it's a real home-row word (50% bonus!)
+        const isRealWord = this.realHomeRowWords.has(word.toLowerCase());
+        const bonusMultiplier = isRealWord ? 1.5 : 1.0;
+        
+        const totalPoints = Math.floor((baseScore + timeBonus) * bonusMultiplier);
+
+        this.state.score += totalPoints;
+        this.state.totalScore += totalPoints; // Accumulate for unlocking
+        
+        // Visual feedback with bonus indicator
+        if (isRealWord) {
+            this.elements.feedback.textContent = `Perfect! +${totalPoints} points! 🌟 REAL WORD BONUS!`;
+        } else {
+            this.elements.feedback.textContent = `Perfect! +${totalPoints} points.`;
+        }
 
         this.state.score += totalPoints;
         this.state.totalScore += totalPoints; // Accumulate for unlocking
