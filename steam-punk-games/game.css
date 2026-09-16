@@ -1,6 +1,6 @@
 /* 
  * Steampunk Clock Words - Grade 6 Edition CSS
- * Enhanced visual timer + larger clock face
+ * Side-by-side layout + progressive difficulty styling
  */
 
 :root {
@@ -92,20 +92,41 @@ body.steampunk-theme {
     font-size: 1.1rem;
 }
 
-.game-area { padding: 20px 15px; position: relative; }
+/* SIDE-BY-SIDE LAYOUT CONTAINER */
+.game-area { padding: 20px 15px; }
 
-.clock-container {
+.side-by-side-container {
     display: flex;
+    gap: 30px;
+    align-items: center;
     justify-content: center;
-    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+/* LEFT SIDE: Clock & Timer */
+.clock-section {
+    flex: 1;
+    min-width: 320px;
+    display: flex;
     flex-direction: column;
     align-items: center;
 }
 
+.clock-container { margin-bottom: 15px; }
+
+/* RIGHT SIDE: Word & Input */
+.input-section {
+    flex: 1.2;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
 /* LARGE CLOCK FACE - VISUAL TIMER */
 .clock-face {
-    width: 320px; /* Larger for visibility */
-    height: 320px;
+    width: 280px;
+    height: 280px;
     background: radial-gradient(circle, 
         var(--steam-brass-gold) 0%, 
         var(--steam-copper-brown) 40%, 
@@ -122,9 +143,9 @@ body.steampunk-theme {
 /* CLOCK HAND - VISUAL TIMER */
 .clock-hand {
     position: absolute;
-    width: 5px; /* Thicker for visibility */
-    height: 120px; /* Longer hand */
-    background: linear-gradient(to bottom, var(--steam-gold) 0%, var(--steam-brass-gold) 100%);
+    width: 5px;
+    height: 110px;
+    background: linear-gradient(to bottom, var(--steam-brass-gold) 0%, #ffd700 100%);
     left: 50%;
     top: 20px;
     transform-origin: bottom center;
@@ -157,37 +178,30 @@ body.steampunk-theme {
 }
 
 /* WORD DISPLAY - CLEAR AND PROMINENT */
-.word-display-container {
-    text-align: center;
-    margin-bottom: 15px;
-}
+.word-display-container { text-align: center; }
 
 .word-glow {
-    font-size: 2.5rem; /* Large, easy to read */
+    font-size: 2.3rem; /* Slightly smaller for side-by-side */
     color: var(--steam-brass-gold);
     letter-spacing: 3px;
-    padding: 15px 30px;
+    padding: 12px 25px;
     background: rgba(0, 0, 0, 0.7);
     border-radius: 12px;
     border: 3px solid var(--steam-brass-gold);
     box-shadow: 0 0 20px rgba(184, 158, 108, 0.6),
                 inset 0 0 20px rgba(0, 0, 0, 0.8);
-    min-height: 70px;
+    min-height: 65px;
     display: flex;
     justify-content: center;
     align-items: center;
     text-shadow: 0 0 15px var(--steam-glow-orange);
 }
 
-.typing-container {
-    text-align: center;
-}
-
 .steampunk-input {
     font-size: 1.3rem;
     padding: 12px 20px;
-    width: 300px;
-    max-width: 90%;
+    width: 100%;
+    max-width: 350px;
     background: rgba(61, 40, 23, 0.8);
     border: 2px solid var(--steam-brass-gold);
     border-radius: 8px;
@@ -204,29 +218,25 @@ body.steampunk-theme {
 }
 
 .feedback-message {
-    margin-top: 10px;
+    margin-top: 5px;
     font-size: 1rem;
     min-height: 30px;
     color: var(--steam-cream-parchment);
     font-style: italic;
+    text-align: center;
 }
 
 .steam-effects {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
     pointer-events: none;
     overflow: hidden;
 }
 
 .steam-particle {
     position: absolute;
-    background: radial-gradient(circle, 
-        rgba(200, 200, 200, 0.9) 0%, 
-        rgba(150, 150, 150, 0.6) 40%, 
-        transparent 70%);
+    background: radial-gradient(circle, rgba(200, 200, 200, 0.9) 0%, rgba(150, 150, 150, 0.6) 40%, transparent 70%);
     border-radius: 50%;
     animation: steamRise 3s ease-in infinite;
     opacity: 0;
@@ -352,23 +362,32 @@ body.steampunk-theme {
 
 .hidden { display: none !important; }
 
-/* RESPONSIVE */
-@media (max-width: 600px) {
-    .clock-face { width: 280px; height: 280px; }
+/* RESPONSIVE - MOBILE */
+@media (max-width: 768px) {
+    .side-by-side-container {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .clock-section, .input-section { width: 100%; text-align: center; }
+    
+    .clock-face { width: 240px; height: 240px; }
     .game-title { font-size: 1.4rem; }
-    .word-glow { font-size: 2rem; }
+    .word-glow { font-size: 1.8rem; }
     .steampunk-button { padding: 8px 16px; font-size: 0.85rem; }
 }
 
 /* DESKTOP OPTIMIZATION */
 @media (min-width: 1400px) {
-    .steam-panel { max-width: 950px; }
-    .clock-face { width: 350px; height: 350px; }
-    .word-glow { font-size: 2.8rem; }
+    .steam-panel { max-width: 1000px; }
+    
+    .clock-face { width: 320px; height: 320px; }
+    .word-glow { font-size: 2.5rem; }
 }
 
 @media (min-width: 1000px) and (max-width: 1399px) {
-    .steam-panel { max-width: 850px; }
-    .clock-face { width: 330px; height: 330px; }
-    .word-glow { font-size: 2.4rem; }
+    .steam-panel { max-width: 900px; }
+    
+    .clock-face { width: 300px; height: 300px; }
+    .word-glow { font-size: 2.2rem; }
 }

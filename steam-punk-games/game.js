@@ -1,6 +1,6 @@
 /**
- * Clockwork Words - Steampunk Typing Game (Grade 6 Edition)
- * Enhanced with visual timer, larger clock, and clear word display
+ * Clockwork Words - Grade 6 Edition (Progressive Difficulty)
+ * Side-by-side layout with increasing word complexity
  */
 
 class ClockworkWords {
@@ -13,20 +13,34 @@ class ClockworkWords {
             score: 0,
             timeRemaining: 30,
             currentWord: '',
-            wordDisplayLetters: [], // Array of letter elements
+            wordDisplayLetters: [],
             gameLoopId: null,
-            lastTime: 0
+            lastTime: 0,
+            wordsTypedThisLevel: 0,
+            maxWordsPerLevel: 10
         };
 
-        // GRADE 6 APPROPRIATE WORD BANK (expandable)
-        this.wordLists = {
-            easy: ['steam', 'gear', 'brass', 'copper', 'forge', 'anvil', 
-                   'lever', 'valve', 'wrench', 'gauge', 'piston', 'engine'],
-            medium: ['boiler', 'turbine', 'pump', 'shaft', 'axle', 'flywheel',
-                     'circuit', 'battery', 'magnet', 'voltage', 'current', 'energy'],
-            hard: ['mechanism', 'instrument', 'telegraph', 'velocity', 'pressure',
-                   'resistor', 'conductor', 'transmission', 'propulsion', 'turbine']
-        };
+        // PROGRESSIVE DIFFICULTY WORD BANKS
+        // Easy level: Short words (4-5 letters), common vocabulary
+        this.easyWords = [
+            'steam', 'gear', 'brass', 'copper', 'forge', 'anvil', 
+            'lever', 'valve', 'wrench', 'gauge', 'piston', 'engine',
+            'wheel', 'shaft', 'axle', 'pump', 'belt', 'drum', 'coil', 'grid'
+        ];
+
+        // Medium level: Longer words (5-7 letters), science terms
+        this.mediumWords = [
+            'boiler', 'turbine', 'motor', 'magnet', 'voltage', 'current', 
+            'energy', 'battery', 'solar', 'wind', 'heat', 'light',
+            'sound', 'force', 'speed', 'mass', 'work', 'power', 'flow', 'heat'
+        ];
+
+        // Hard level: Complex words (7-9 letters), advanced concepts
+        this.hardWords = [
+            'mechanism', 'instrument', 'telegraph', 'velocity', 'pressure',
+            'resistor', 'conductor', 'transmission', 'propulsion', 'turbine',
+            'generator', 'transformer', 'calibrate', 'measuring', 'electricity'
+        ];
 
         // DOM elements
         this.elements = {
@@ -86,6 +100,7 @@ class ClockworkWords {
         this.state.isPlaying = true;
         this.state.isPaused = false;
         this.state.timeRemaining = 30 + (this.state.level - 1) * 5;
+        this.state.wordsTypedThisLevel = 0;
         this.state.wordDisplayLetters = [];
 
         this.updateUI();
@@ -139,7 +154,7 @@ class ClockworkWords {
 
             this.state.timeRemaining -= deltaTime;
             
-            // Update clock hand to DECREASE (timer effect)
+            // Visual timer: hand sweeps from -135° to +135°
             const maxTime = 30 + (this.state.level - 1) * 5;
             const progress = this.state.timeRemaining / maxTime;
             const rotation = progress * 270 - 135; // Start at -135°, end at 135°
@@ -158,24 +173,39 @@ class ClockworkWords {
         }
     }
 
-    generateNewWord() {
-        const difficulty = this.state.level <= 3 ? 'easy' : 
-                          this.state.level <= 7 ? 'medium' : 'hard';
-        
-        const words = this.wordLists[difficulty];
-        const wordIndex = Math.floor(Math.random() * words.length);
-        this.state.currentWord = words[wordIndex];
+    // PROGRESSIVE DIFFICULTY: Select word based on level
+    getWordForDifficulty() {
+        // Level 1-3: Easy words (4-5 letters)
+        if (this.state.level <= 3) {
+            const words = this.easyWords;
+            return words[Math.floor(Math.random() * words.length)];
+        }
+        // Level 4-7: Medium words (5-7 letters)
+        else if (this.state.level <= 7) {
+            const words = this.mediumWords;
+            return words[Math.floor(Math.random() * words.length)];
+        }
+        // Level 8+: Hard words (7-9+ letters)
+        else {
+            const words = this.hardWords;
+            return words[Math.floor(Math.random() * words.length)];
+        }
+    }
 
-        // CLEARLY DISPLAY THE WORD - no guessing!
+    generateNewWord() {
+        // Get word based on current difficulty level
+        this.state.currentWord = this.getWordForDifficulty();
+
+        // Display word clearly at top
         this.displayWordClearly();
 
         this.elements.playerInput.value = '';
         this.elements.feedback.textContent = `Type the word: "${this.state.currentWord}"`;
         
-        // Show letters around clock (visible, not hidden)
+        // Show all letters around clock
         this.showLettersAroundClock();
 
-        // Reset clock hand to start position
+        // Reset clock hand to starting position
         const maxTime = 30 + (this.state.level - 1) * 5;
         const rotation = (this.state.timeRemaining / maxTime) * 270 - 135;
         this.elements.clockHand.style.transform = 
@@ -183,7 +213,6 @@ class ClockworkWords {
     }
 
     displayWordClearly() {
-        // Show the word clearly at the top - no underscores!
         this.elements.wordDisplay.textContent = this.state.currentWord.toUpperCase();
         this.elements.wordDisplay.style.color = 'var(--steam-brass-gold)';
         this.elements.wordDisplay.style.textShadow = '0 0 15px var(--steam-glow-orange)';
@@ -211,13 +240,9 @@ class ClockworkWords {
             dot.style.left = `${x - 12}px`;
             dot.style.top = `${y - 12}px`;
             
-            // Add color coding: vowels different from consonants
+            // Color-coded: vowels gold, consonants brass
             const isVowel = 'aeiouAEIOU'.includes(letters[i]);
-            if (isVowel) {
-                dot.style.background = '#ffd700'; // Gold for vowels
-            } else {
-                dot.style.background = '#b89e6c'; // Brass for consonants
-            }
+            dot.style.background = isVowel ? '#ffd700' : '#b89e6c';
 
             this.elements.letterTrail.appendChild(dot);
             this.state.wordDisplayLetters.push(dot);
@@ -231,7 +256,7 @@ class ClockworkWords {
         const currentWord = this.state.currentWord;
         const typedLength = typed.length;
 
-        // Visual feedback: highlight correctly typed letters
+        // Visual feedback on typing progress
         let highlightedText = '';
         
         for (let i = 0; i < currentWord.length; i++) {
@@ -255,24 +280,23 @@ class ClockworkWords {
         const typed = this.elements.playerInput.value.toLowerCase().trim();
         
         if (typed === this.state.currentWord) {
-            // Correct!
             this.onCorrectWord(typed);
         } else {
-            // Incorrect - show which letters are wrong
+            // Wrong answer feedback
             this.elements.wordDisplay.style.borderColor = '#ff4444';
             setTimeout(() => {
                 this.elements.wordDisplay.style.borderColor = 'var(--steam-brass-gold)';
             }, 300);
 
-            // Show feedback
             this.elements.feedback.textContent = `Try again! It's "${this.state.currentWord}"`;
             
-            // Penalty: reduce time by 2 seconds
+            // Time penalty (max 5 seconds remaining to prevent instant loss)
             this.state.timeRemaining = Math.max(5, this.state.timeRemaining - 2);
         }
     }
 
     onCorrectWord(word) {
+        // Score calculation: base + speed bonus
         const baseScore = word.length * 10;
         const timeBonus = Math.floor(this.state.timeRemaining) * 2;
         const totalPoints = baseScore + timeBonus;
@@ -280,14 +304,14 @@ class ClockworkWords {
         this.state.score += totalPoints;
         this.elements.feedback.textContent = `Perfect! +${totalPoints} points`;
 
-        // Show completed word in gold
+        // Show completed word
         this.elements.wordDisplay.innerHTML = 
             `<span style="color: var(--steam-glow-gold)">${word.toUpperCase()}</span>`;
 
-        // Check if all words for this level are done (10 words per level)
-        // For now, we'll use a simple approach: complete word = next level or continue
-        
-        // Generate next word immediately
+        // Progress tracking
+        this.state.wordsTypedThisLevel++;
+
+        // Next word after delay
         setTimeout(() => {
             this.generateNewWord();
         }, 800);
@@ -302,13 +326,13 @@ class ClockworkWords {
         if (win) {
             this.showOverlay(
                 '🎉 ALL WORDS COMPLETE! 🎉',
-                `Incredible! Final score: ${this.state.score} points. You're a master typist!`,
+                `Incredible! Final score: ${this.state.score} points. Master typist!`,
                 false
             );
         } else {
             this.showOverlay(
                 'GAME OVER',
-                `Time's up! Final score: ${this.state.score} points. Try again to beat your record!`,
+                `Time's up! Final score: ${this.state.score} points. Try again!`,
                 false
             );
         }
@@ -324,6 +348,7 @@ class ClockworkWords {
         this.state.level = 1;
         this.state.score = 0;
         this.state.timeRemaining = 30;
+        this.state.wordsTypedThisLevel = 0;
         this.state.wordDisplayLetters = [];
         cancelAnimationFrame(this.state.gameLoopId);
 
@@ -331,10 +356,10 @@ class ClockworkWords {
         this.elements.startBtn.textContent = 'Start Game';
         this.elements.pauseBtn.disabled = true;
         
-        // Show sample word for new game
-        const sampleWord = this.wordLists.easy[0];
-        this.elements.wordDisplay.textContent = sampleWord.toUpperCase();
-        this.elements.wordDisplay.innerHTML = `<span style="color: var(--steam-brass-gold)">SAMPLE: ${sampleWord}</span>`;
+        // Sample word display for new game
+        const sampleWord = this.easyWords[0];
+        this.elements.wordDisplay.innerHTML = 
+            `<span style="color: var(--steam-brass-gold)">SAMPLE: ${sampleWord}</span>`;
 
         this.updateUI();
     }
@@ -346,19 +371,17 @@ class ClockworkWords {
         const timeFormatted = Math.max(0, Math.ceil(this.state.timeRemaining));
         this.elements.timeDisplay.textContent = `${timeFormatted}s`;
 
-        // Update clock hand rotation (visual timer)
+        // Timer visual feedback
         const maxTime = 30 + (this.state.level - 1) * 5;
-        
-        // Color change for low time
         if (timeFormatted <= 5) {
             this.elements.timeDisplay.style.color = '#ff4444';
             this.elements.clockHand.style.background = '#ff4444';
         } else {
             this.elements.timeDisplay.style.color = '';
-            this.elements.clockHand.style.background = 'var(--steam-brass-gold)';
+            this.elements.clockHand.style.background = 'linear-gradient(to bottom, var(--steam-brass-gold) 0%, #ffd700 100%)';
         }
 
-        // Update progress bar at bottom (optional, keeps it there)
+        // Progress bar update
         const progressPercent = (this.state.timeRemaining / maxTime) * 100;
         document.getElementById('time-bar').style.width = `${Math.max(0, progressPercent)}%`;
     }
@@ -367,12 +390,7 @@ class ClockworkWords {
         this.elements.overlayTitle.textContent = title;
         this.elements.overlayMessage.textContent = message;
         
-        if (hasContinue) {
-            this.elements.closeOverlay.textContent = 'Continue';
-        } else {
-            this.elements.closeOverlay.textContent = 'Play Again';
-        }
-
+        this.elements.closeOverlay.textContent = hasContinue ? 'Continue' : 'Play Again';
         this.elements.closeOverlay.onclick = onContinueFn || (() => this.resetGame());
         
         this.elements.overlay.classList.remove('hidden');
@@ -397,7 +415,6 @@ class ClockworkWords {
 document.addEventListener('DOMContentLoaded', () => {
     const game = new ClockworkWords();
     
-    // Expose to global scope for debugging
     window.clockworkGame = game;
-    console.log('🔧 Clockwork Words Grade 6 Edition initialized! Ready to play.');
+    console.log('🔧 Clockwork Words - Progressive Difficulty Edition initialized!');
 });
