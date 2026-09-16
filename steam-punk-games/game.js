@@ -286,7 +286,10 @@ class ClockworkWords {
         this.elements.playerInput.value = '';
         this.elements.feedback.textContent = `Type the word: "${this.state.currentWord}"`;
         
-        // Show all letters around clock face
+        // Reset spiral state for sequential reveal
+        this.state.lettersRevealed = 0;
+        
+        // Show all letters around clock face (initially hidden)
         this.showLettersAroundClock();
 
         // Reset clock hand to starting position
@@ -297,6 +300,37 @@ class ClockworkWords {
 
         // Reset active letter index for chain reaction mode
         this.state.activeLetterIndex = 0;
+        
+        // Start sequential reveal: Enemy moves, then letters appear behind it
+        setTimeout(() => this.revealSpiralSequentially(), 300);
+    }
+    
+    revealSpiralSequentially() {
+        const totalLetters = this.state.currentWord.length;
+        let index = 0;
+        
+        // Reveal one letter every 200ms, creating a cascading effect
+        const intervalId = setInterval(() => {
+            if (index >= totalLetters) {
+                clearInterval(intervalId);
+                return;
+            }
+            
+            // Show this letter (opacity from 0 to 1)
+            const dot = this.state.wordDisplayLetters[index];
+            if (dot) {
+                dot.style.opacity = '1';
+                dot.style.transform = 'scale(1)';
+            }
+            
+            // Update spiral dots visual feedback
+            this.updateSpiralDots(
+                document.getElementById('player-input').value.toLowerCase(),
+                this.state.currentWord
+            );
+            
+            index++;
+        }, 200); // Reveal every 200ms for dramatic effect
     }
 
     displayWordClearly() {
@@ -337,6 +371,11 @@ class ClockworkWords {
             dot.style.left = `${x - 12}px`;
             dot.style.top = `${y - 12}px`;
             
+            // Initially hidden (opacity 0) for sequential reveal
+            dot.style.opacity = '0';
+            dot.style.transform = 'scale(0.5)';
+            dot.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            
             // Color-coded: vowels gold, consonants brass
             const isVowel = 'aeiouAEIOU'.includes(letters[i]);
             dot.style.background = isVowel ? '#ffd700' : '#b89e6c';
@@ -350,7 +389,7 @@ class ClockworkWords {
             this.state.spinePoints.push({x, y});
         }
         
-        // Add enemy element at center if it doesn't exist
+        // Add enemy element at center (already visible for sequential start)
         if (!this.elements.enemy) {
             this.elements.enemy = document.createElement('div');
             this.elements.enemy.id = 'steam-enemy';
@@ -361,7 +400,17 @@ class ClockworkWords {
             this.elements.enemy.style.borderRadius = '50%';
             this.elements.enemy.style.boxShadow = '0 0 10px #ff0000, 0 0 20px #ffaa00';
             this.elements.enemy.style.zIndex = '10';
+            this.elements.enemy.style.left = `${centerX - 10}px`;
+            this.elements.enemy.style.top = `${centerY - 10}px`;
+            
+            // Add steam effect
+            this.elements.enemy.innerHTML = '⚡';
             this.elements.letterTrail.appendChild(this.elements.enemy);
+        } else {
+            // Reset enemy position to center for new word
+            this.elements.enemy.style.left = `${centerX - 10}px`;
+            this.elements.enemy.style.top = `${centerY - 10}px`;
+            this.elements.enemy.classList.add('escape');
         }
     }
 
