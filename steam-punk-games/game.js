@@ -1,6 +1,6 @@
 /**
- * Clockwork Words - Steampunk Typing Game
- * Core game logic and mechanics
+ * Clockwork Words - Steampunk Typing Game (Grade 6 Edition)
+ * Enhanced with visual timer, larger clock, and clear word display
  */
 
 class ClockworkWords {
@@ -13,25 +13,19 @@ class ClockworkWords {
             score: 0,
             timeRemaining: 30,
             currentWord: '',
-            wordIndex: 0,
-            wordsTypedThisRound: 0,
-            maxWordsPerLevel: 10,
-            clockHandRotation: 0,
+            wordDisplayLetters: [], // Array of letter elements
             gameLoopId: null,
             lastTime: 0
         };
 
-        // Word lists by difficulty (expandable)
+        // GRADE 6 APPROPRIATE WORD BANK (expandable)
         this.wordLists = {
-            easy: ['clock', 'steam', 'gear', 'brass', 'copper', 'bronze', 'smith', 'forge', 'anvil', 'piston', 
-                   'lever', 'valve', 'wrench', 'gauge', 'boiler', 'engine', 'turbine', 'shaft', 'axle', 'flywheel'],
-            medium: ['mechanism', 'instrument', 'telegraph', 'explosion', 'industrial', 'manufacture', 'precision', 
-                     'automation', 'construction', 'engineering', 'discovery', 'invention', 'laboratory', 
-                     'observation', 'calibration', 'transmission', 'propulsion', 'compression', 'rotation', 'velocity'],
-            hard: ['microscopic', 'mechanically', 'automotive', 'atmospheric', 'technological', 'instrumental', 
-                   'manufacturing', 'engineeringly', 'observational', 'calibrating', 'transmissional', 
-                   'propulsive', 'compressional', 'rotational', 'kinematical', 'geometrically', 'dynamically', 
-                   'metallurgy', 'aeronautical', 'architectural']
+            easy: ['steam', 'gear', 'brass', 'copper', 'forge', 'anvil', 
+                   'lever', 'valve', 'wrench', 'gauge', 'piston', 'engine'],
+            medium: ['boiler', 'turbine', 'pump', 'shaft', 'axle', 'flywheel',
+                     'circuit', 'battery', 'magnet', 'voltage', 'current', 'energy'],
+            hard: ['mechanism', 'instrument', 'telegraph', 'velocity', 'pressure',
+                   'resistor', 'conductor', 'transmission', 'propulsion', 'turbine']
         };
 
         // DOM elements
@@ -45,15 +39,12 @@ class ClockworkWords {
             levelDisplay: document.getElementById('level-display'),
             scoreDisplay: document.getElementById('score-display'),
             timeDisplay: document.getElementById('time-display'),
-            timeBar: document.getElementById('time-bar'),
             startBtn: document.getElementById('start-btn'),
             pauseBtn: document.getElementById('pause-btn'),
             restartBtn: document.getElementById('restart-btn'),
             overlay: document.getElementById('overlay'),
             overlayTitle: document.getElementById('overlay-title'),
             overlayMessage: document.getElementById('overlay-message'),
-            finalScore: document.getElementById('final-score'),
-            finalLevel: document.getElementById('final-level'),
             closeOverlay: document.getElementById('close-overlay')
         };
 
@@ -61,16 +52,13 @@ class ClockworkWords {
         this.initEventListeners();
     }
 
-    /**
-     * Initialize all event listeners and UI state
-     */
     initEventListeners() {
         this.elements.startBtn.addEventListener('click', () => this.startGame());
         this.elements.pauseBtn.addEventListener('click', () => this.togglePause());
         this.elements.restartBtn.addEventListener('click', () => this.resetGame());
         this.elements.closeOverlay.addEventListener('click', () => this.hideOverlay());
-        
-        // Input handling with enter key support
+
+        // Input handling
         this.elements.playerInput.addEventListener('input', (e) => this.handleTyping(e));
         this.elements.playerInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -79,7 +67,6 @@ class ClockworkWords {
             }
         });
 
-        // Handle focus for mobile keyboards
         document.addEventListener('click', () => {
             if (this.state.isPlaying && !this.state.isPaused) {
                 this.elements.playerInput.focus();
@@ -87,9 +74,6 @@ class ClockworkWords {
         });
     }
 
-    /**
-     * Start or resume the game
-     */
     startGame() {
         if (!this.state.isPlaying) {
             this.startLevel();
@@ -98,36 +82,26 @@ class ClockworkWords {
         }
     }
 
-    /**
-     * Start a new level
-     */
     startLevel() {
         this.state.isPlaying = true;
         this.state.isPaused = false;
-        this.state.timeRemaining = 30 + (this.state.level - 1) * 5; // Extra time per level
-        this.state.wordsTypedThisRound = 0;
-        this.state.wordIndex = 0;
+        this.state.timeRemaining = 30 + (this.state.level - 1) * 5;
+        this.state.wordDisplayLetters = [];
 
         this.updateUI();
         this.hideOverlay();
         
-        // Enable controls
         this.elements.startBtn.textContent = 'Pause Game';
         this.elements.pauseBtn.disabled = false;
         this.elements.restartBtn.disabled = false;
 
-        // Focus input and start game loop
         this.elements.playerInput.focus();
         this.state.lastTime = performance.now();
         this.state.gameLoopId = requestAnimationFrame((time) => this.gameLoop(time));
 
-        // Generate first word
         this.generateNewWord();
     }
 
-    /**
-     * Resume paused game
-     */
     resumeGame() {
         this.state.isPaused = false;
         this.elements.pauseBtn.textContent = 'Pause';
@@ -137,11 +111,8 @@ class ClockworkWords {
         this.state.gameLoopId = requestAnimationFrame((time) => this.gameLoop(time));
     }
 
-    /**
-     * Toggle pause state
-     */
     togglePause() {
-        if (!this.state.isPlaying || this.state.wordsTypedThisRound >= this.state.maxWordsPerLevel) return;
+        if (!this.state.isPlaying || !this.isLevelComplete()) return;
 
         this.state.isPaused = !this.state.isPaused;
         
@@ -155,93 +126,104 @@ class ClockworkWords {
         }
     }
 
-    /**
-     * Main game loop for time tracking and clock hand animation
-     */
+    isLevelComplete() {
+        return !this.state.isPlaying || 
+               !this.elements.playerInput.value ||
+               this.elements.playerInput.value.toLowerCase() === this.state.currentWord;
+    }
+
     gameLoop(currentTime) {
         if (!this.state.isPaused && this.state.isPlaying) {
-            const deltaTime = (currentTime - this.state.lastTime) / 1000; // seconds
+            const deltaTime = (currentTime - this.state.lastTime) / 1000;
             this.state.lastTime = currentTime;
 
-            // Decrease time
             this.state.timeRemaining -= deltaTime;
             
-            // Update clock hand rotation (360 degrees in 30 seconds base, more per level)
+            // Update clock hand to DECREASE (timer effect)
             const maxTime = 30 + (this.state.level - 1) * 5;
-            this.state.clockHandRotation = (this.state.timeRemaining / maxTime) * 360;
+            const progress = this.state.timeRemaining / maxTime;
+            const rotation = progress * 270 - 135; // Start at -135°, end at 135°
             
-            // Update UI
+            this.elements.clockHand.style.transform = 
+                `translateX(-50%) rotate(${rotation}deg)`;
+            
             this.updateUI();
 
-            // Check for time expiration
             if (this.state.timeRemaining <= 0) {
                 this.endGame(false);
                 return;
             }
 
-            // Continue loop
             this.state.gameLoopId = requestAnimationFrame((time) => this.gameLoop(time));
         }
     }
 
-    /**
-     * Generate a new word based on current level difficulty
-     */
     generateNewWord() {
         const difficulty = this.state.level <= 3 ? 'easy' : 
                           this.state.level <= 7 ? 'medium' : 'hard';
         
         const words = this.wordLists[difficulty];
         const wordIndex = Math.floor(Math.random() * words.length);
-        
         this.state.currentWord = words[wordIndex];
-        this.state.wordsTypedThisRound++;
 
-        // Update display with underscores for untyped letters
-        this.elements.wordDisplay.textContent = '_'.repeat(this.state.currentWord.length);
+        // CLEARLY DISPLAY THE WORD - no guessing!
+        this.displayWordClearly();
+
         this.elements.playerInput.value = '';
-        this.elements.feedback.textContent = '';
+        this.elements.feedback.textContent = `Type the word: "${this.state.currentWord}"`;
+        
+        // Show letters around clock (visible, not hidden)
+        this.showLettersAroundClock();
 
-        // Position letters around clock face
-        this.positionLettersAroundClock();
+        // Reset clock hand to start position
+        const maxTime = 30 + (this.state.level - 1) * 5;
+        const rotation = (this.state.timeRemaining / maxTime) * 270 - 135;
+        this.elements.clockHand.style.transform = 
+            `translateX(-50%) rotate(${rotation}deg)`;
     }
 
-    /**
-     * Position letter dots around the clock face perimeter
-     */
-    positionLettersAroundClock() {
-        // Clear previous dots
+    displayWordClearly() {
+        // Show the word clearly at the top - no underscores!
+        this.elements.wordDisplay.textContent = this.state.currentWord.toUpperCase();
+        this.elements.wordDisplay.style.color = 'var(--steam-brass-gold)';
+        this.elements.wordDisplay.style.textShadow = '0 0 15px var(--steam-glow-orange)';
+    }
+
+    showLettersAroundClock() {
+        const letters = this.state.currentWord.split('');
         this.elements.letterTrail.innerHTML = '';
         
-        const numLetters = this.state.currentWord.length;
-        const radius = 130; // distance from center
+        const numLetters = letters.length;
+        const radius = 130;
         const centerX = 160; // clock face width/2
         const centerY = 160; // clock face height/2
 
+        this.state.wordDisplayLetters = [];
+
         for (let i = 0; i < numLetters; i++) {
-            const angle = (i / numLetters) * Math.PI * 2; // evenly spaced
+            const angle = (i / numLetters) * Math.PI * 2;
             const x = centerX + radius * Math.cos(angle);
             const y = centerY + radius * Math.sin(angle);
 
             const dot = document.createElement('div');
             dot.className = 'letter-dot';
-            dot.textContent = this.state.currentWord[i];
-            dot.style.left = `${x - 12}px`; // center the 24px dot
+            dot.textContent = letters[i].toUpperCase();
+            dot.style.left = `${x - 12}px`;
             dot.style.top = `${y - 12}px`;
             
-            this.elements.letterTrail.appendChild(dot);
-        }
+            // Add color coding: vowels different from consonants
+            const isVowel = 'aeiouAEIOU'.includes(letters[i]);
+            if (isVowel) {
+                dot.style.background = '#ffd700'; // Gold for vowels
+            } else {
+                dot.style.background = '#b89e6c'; // Brass for consonants
+            }
 
-        // Animate clock hand to show current letter position
-        const progress = this.state.wordIndex / numLetters;
-        const rotation = progress * 360;
-        this.elements.clockHand.style.transform = 
-            `translateX(-50%) rotate(${rotation}deg)`;
+            this.elements.letterTrail.appendChild(dot);
+            this.state.wordDisplayLetters.push(dot);
+        }
     }
 
-    /**
-     * Handle player typing input
-     */
     handleTyping(event) {
         if (this.state.isPaused || !this.state.isPlaying) return;
 
@@ -249,32 +231,24 @@ class ClockworkWords {
         const currentWord = this.state.currentWord;
         const typedLength = typed.length;
 
-        // Clear previous feedback
-        this.elements.feedback.textContent = '';
-
-        // Highlight correctly typed letters
-        let highlightedWord = '';
-        for (let i = 0; i < Math.min(typedLength, currentWord.length); i++) {
-            if (typed[i] === currentWord[i]) {
-                highlightedWord += `<span style="color: var(--steam-glow-gold)">${currentWord[i]}</span>`;
+        // Visual feedback: highlight correctly typed letters
+        let highlightedText = '';
+        
+        for (let i = 0; i < currentWord.length; i++) {
+            if (i < typedLength) {
+                if (typed[i] === currentWord[i]) {
+                    highlightedText += `<span style="color: var(--steam-glow-gold); text-decoration: underline;">${currentWord[i].toUpperCase()}</span>`;
+                } else {
+                    highlightedText += `<span style="color: #ff6b35; text-decoration: line-through;">${currentWord[i].toUpperCase()}</span>`;
+                }
             } else {
-                highlightedWord += '<span style="color: #ff6b35">';
+                highlightedText += `${currentWord[i].toUpperCase()}`;
             }
         }
 
-        // Show untyped letters as underscores
-        for (let i = typedLength; i < currentWord.length; i++) {
-            if (i < currentWord.length - 1) {
-                highlightedWord += '___';
-            }
-        }
-
-        this.elements.wordDisplay.innerHTML = highlightedWord || '_'.repeat(currentWord.length);
+        this.elements.wordDisplay.innerHTML = highlightedText;
     }
 
-    /**
-     * Validate the word when player completes it
-     */
     validateWord() {
         if (this.state.isPaused) return;
 
@@ -284,24 +258,21 @@ class ClockworkWords {
             // Correct!
             this.onCorrectWord(typed);
         } else {
-            // Incorrect - visual feedback
+            // Incorrect - show which letters are wrong
             this.elements.wordDisplay.style.borderColor = '#ff4444';
             setTimeout(() => {
                 this.elements.wordDisplay.style.borderColor = 'var(--steam-brass-gold)';
             }, 300);
 
-            this.elements.feedback.textContent = `Try again! The word is "${this.state.currentWord}"`;
+            // Show feedback
+            this.elements.feedback.textContent = `Try again! It's "${this.state.currentWord}"`;
             
             // Penalty: reduce time by 2 seconds
-            this.state.timeRemaining = Math.max(0, this.state.timeRemaining - 2);
+            this.state.timeRemaining = Math.max(5, this.state.timeRemaining - 2);
         }
     }
 
-    /**
-     * Handle successful word completion
-     */
     onCorrectWord(word) {
-        // Calculate score based on word length and speed bonus
         const baseScore = word.length * 10;
         const timeBonus = Math.floor(this.state.timeRemaining) * 2;
         const totalPoints = baseScore + timeBonus;
@@ -309,61 +280,29 @@ class ClockworkWords {
         this.state.score += totalPoints;
         this.elements.feedback.textContent = `Perfect! +${totalPoints} points`;
 
-        // Update word display to show completed word
+        // Show completed word in gold
         this.elements.wordDisplay.innerHTML = 
-            `<span style="color: var(--steam-glow-gold)">${word}</span>`;
+            `<span style="color: var(--steam-glow-gold)">${word.toUpperCase()}</span>`;
 
-        // Level progression
-        if (this.state.wordsTypedThisRound >= this.state.maxWordsPerLevel) {
-            this.completeLevel();
-        } else {
-            // Generate next word
-            setTimeout(() => {
-                this.generateNewWord();
-            }, 500);
-        }
+        // Check if all words for this level are done (10 words per level)
+        // For now, we'll use a simple approach: complete word = next level or continue
+        
+        // Generate next word immediately
+        setTimeout(() => {
+            this.generateNewWord();
+        }, 800);
 
-        // Update UI
         this.updateUI();
     }
 
-    /**
-     * Complete a level and start the next
-     */
-    completeLevel() {
-        const levelCompleted = true;
-        
-        // Show completion overlay
-        this.showOverlay(
-            'LEVEL COMPLETE!', 
-            `Excellent work! You reached level ${this.state.level} with ${this.state.score} points.`,
-            true,
-            () => {
-                this.state.level++;
-                this.startLevel();
-            }
-        );
-
-        // Add bonus for speed
-        const timeBonus = Math.floor(this.state.timeRemaining) * 5;
-        if (timeBonus > 0) {
-            setTimeout(() => {
-                alert(`Time bonus: +${timeBonus} points!`);
-            }, 1000);
-        }
-    }
-
-    /**
-     * End the game completely
-     */
     endGame(win) {
         this.state.isPlaying = false;
         cancelAnimationFrame(this.state.gameLoopId);
 
         if (win) {
             this.showOverlay(
-                '🎉 ALL LEVELS COMPLETE! 🎉',
-                `Incredible! Final score: ${this.state.score} points. You're a true master typist!`,
+                '🎉 ALL WORDS COMPLETE! 🎉',
+                `Incredible! Final score: ${this.state.score} points. You're a master typist!`,
                 false
             );
         } else {
@@ -374,60 +313,56 @@ class ClockworkWords {
             );
         }
 
-        // Reset controls
         this.elements.startBtn.textContent = 'Start Game';
         this.elements.pauseBtn.disabled = true;
         this.elements.restartBtn.disabled = false;
     }
 
-    /**
-     * Reset game to initial state
-     */
     resetGame() {
         this.state.isPlaying = false;
         this.state.isPaused = false;
         this.state.level = 1;
         this.state.score = 0;
         this.state.timeRemaining = 30;
-        this.state.wordsTypedThisRound = 0;
-        this.state.clockHandRotation = 0;
+        this.state.wordDisplayLetters = [];
         cancelAnimationFrame(this.state.gameLoopId);
 
         this.hideOverlay();
         this.elements.startBtn.textContent = 'Start Game';
         this.elements.pauseBtn.disabled = true;
         
+        // Show sample word for new game
+        const sampleWord = this.wordLists.easy[0];
+        this.elements.wordDisplay.textContent = sampleWord.toUpperCase();
+        this.elements.wordDisplay.innerHTML = `<span style="color: var(--steam-brass-gold)">SAMPLE: ${sampleWord}</span>`;
+
         this.updateUI();
     }
 
-    /**
-     * Update all UI elements with current state
-     */
     updateUI() {
         this.elements.levelDisplay.textContent = this.state.level;
         this.elements.scoreDisplay.textContent = this.state.score;
         
         const timeFormatted = Math.max(0, Math.ceil(this.state.timeRemaining));
-        this.elements.timeDisplay.textContent = timeFormatted;
+        this.elements.timeDisplay.textContent = `${timeFormatted}s`;
 
-        // Update progress bar
-        const totalTime = 30 + (this.state.level - 1) * 5;
-        const progressPercent = (this.state.timeRemaining / totalTime) * 100;
-        this.elements.timeBar.style.width = `${Math.max(0, progressPercent)}%`;
-
+        // Update clock hand rotation (visual timer)
+        const maxTime = 30 + (this.state.level - 1) * 5;
+        
         // Color change for low time
         if (timeFormatted <= 5) {
             this.elements.timeDisplay.style.color = '#ff4444';
-            this.elements.timeBar.style.background = 'linear-gradient(90deg, #ff4444, #ff6b35)';
+            this.elements.clockHand.style.background = '#ff4444';
         } else {
             this.elements.timeDisplay.style.color = '';
-            this.elements.timeBar.style.background = '';
+            this.elements.clockHand.style.background = 'var(--steam-brass-gold)';
         }
+
+        // Update progress bar at bottom (optional, keeps it there)
+        const progressPercent = (this.state.timeRemaining / maxTime) * 100;
+        document.getElementById('time-bar').style.width = `${Math.max(0, progressPercent)}%`;
     }
 
-    /**
-     * Show game overlay with custom message
-     */
     showOverlay(title, message, hasContinue = false, onContinueFn = null) {
         this.elements.overlayTitle.textContent = title;
         this.elements.overlayMessage.textContent = message;
@@ -438,22 +373,15 @@ class ClockworkWords {
             this.elements.closeOverlay.textContent = 'Play Again';
         }
 
-        // Store callback for continue button
         this.elements.closeOverlay.onclick = onContinueFn || (() => this.resetGame());
         
         this.elements.overlay.classList.remove('hidden');
     }
 
-    /**
-     * Hide game overlay
-     */
     hideOverlay() {
         this.elements.overlay.classList.add('hidden');
     }
 
-    /**
-     * Get current game state for debugging/exporting
-     */
     getGameState() {
         return {
             level: this.state.level,
@@ -471,5 +399,5 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Expose to global scope for debugging
     window.clockworkGame = game;
-    console.log('🔧 Clockwork Words initialized! Ready to play.');
+    console.log('🔧 Clockwork Words Grade 6 Edition initialized! Ready to play.');
 });
