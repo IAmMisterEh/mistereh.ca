@@ -1,10 +1,10 @@
 /**
- * Clockwork Words - Spiral Drill Mode
- * Pure letter-by-letter typing drill!
- * No words, no Enter key - just type the pulsing letter as fast as you can!
+ * Clockwork Words - Timed Spiral Drill
+ * Letters appear automatically as enemy escapes!
+ * Type the current target letter before it reaches the edge.
  */
 
-class ClockworkWordsSpiral {
+class ClockworkWordsTimedSpiral {
     constructor() {
         // Game state
         this.state = {
@@ -21,18 +21,30 @@ class ClockworkWordsSpiral {
             unlockedLevels: 1,
             currentIndex: 0,
             spiralLetters: [],
-            letterRevealInterval: null
+            spinePoints: [],
+            enemyPositionIndex: 0,
+            lastRevealTime: 0,
+            revealRate: 1000, // ms between letters (Level 1)
+            isEnemyMoving: false
         };
 
         // HOME ROW LETTERS (Always available for drills)
         this.homeRowLetters = 'asdfghjkl;';
         
-        // Available letters by level (progressive unlock)
+        // Available letters by level
         this.availableLetters = {
             1: this.homeRowLetters,                 // Home row only
             2: 'qwertyuiop' + this.homeRowLetters, // + Top row
-            3: this.availableLetters[2] + 'zxcvbnm',// + Bottom row
+            3: this.availableLetters[2] + 'zxcvbnm', // + Bottom row
             4: this.availableLetters[3] + ' ,.'     // + Full keyboard
+        };
+
+        // Letter sequence length by level
+        this.sequenceLengths = {
+            1: 30, // Start with 30 letters
+            2: 35,
+            3: 40,
+            4: 45
         };
 
         // Unlock thresholds
@@ -62,7 +74,7 @@ class ClockworkWordsSpiral {
             overlayMessage: document.getElementById('overlay-message'),
             closeOverlay: document.getElementById('close-overlay'),
             enemy: null,
-            sequenceDisplay: null // Display current target letter
+            escapeBar: null // Visual escape progress bar
         };
 
         // Initialize event listeners
@@ -78,7 +90,7 @@ class ClockworkWordsSpiral {
         this.elements.restartBtn.addEventListener('click', () => this.resetGame());
         this.elements.closeOverlay.addEventListener('click', () => this.hideOverlay());
 
-        // Input handling - no Enter key, just type continuously!
+        // Input handling - type continuously, no Enter key!
         this.elements.playerInput.addEventListener('input', (e) => this.handleTyping(e));
         
         document.addEventListener('click', () => {
@@ -122,11 +134,41 @@ class ClockworkWordsSpiral {
         this.state.timeRemaining = 45 + (this.state.level - 1) * 5;
         this.state.lettersTypedThisSession = 0;
         
+        // Adjust reveal rate based on level (faster as levels progress)
+        this.state.revealRate = 1000 - ((this.state.level - 1) * 200); // Level 1: 1s, Level 4: 400ms
+        
         this.updateUI();
         this.hideOverlay();
         
         this.elements.startBtn.textContent = 'Pause Session';
         this.elements.pauseBtn.disabled = false;
+        
+        // Initialize escape bar if it doesn't exist
+        if (!this.elements.escapeBar) {
+            this.elements.escapeBar = document.createElement('div');
+            this.elements.escapeBar.id = 'escape-progress';
+            this.elements.escapeBar.style.position = 'absolute';
+            this.elements.escapeBar.style.bottom = '20px';
+            this.elements.escapeBar.style.left = '50%';
+            this.elements.escapeBar.style.transform = 'translateX(-50%)';
+            this.elements.escapeBar.style.width = '200px';
+            this.elements.escapeBar.style.height = '8px';
+            this.elements.escapeBar.style.background = 'rgba(61, 40, 23, 0.8)';
+            this.elements.escapeBar.style.borderRadius = '4px';
+            this.elements.escapeBar.style.border = '1px solid var(--steam-brass-gold)';
+            this.elements.escapeBar.style.overflow = 'hidden';
+            this.elements.escapeBar.style.zIndex = '5';
+            
+            const fill = document.createElement('div');
+            fill.id = 'escape-fill';
+            fill.style.width = '0%';
+            fill.style.height = '100%';
+            fill.style.background = 'linear-gradient(90deg, #ff4444, #ffaa00)';
+            fill.style.transition = 'width 0.3s ease';
+            
+            this.elements.escapeBar.appendChild(fill);
+            this.elements.clockFace.appendChild(this.elements.escapeBar);
+        }
         
         // Start the spiral drill
         this.startSpiralDrill();
@@ -146,7 +188,6 @@ class ClockworkWordsSpiral {
         
         if (this.state.isPaused) {
             cancelAnimationFrame(this.state.gameLoopId);
-            if (this.state.letterRevealInterval) clearInterval(this.state.letterRevealInterval);
             this.elements.pauseBtn.textContent = 'Resume';
             this.showOverlay('PAUSED', 'Drill paused!');
         } else {
@@ -169,6 +210,9 @@ class ClockworkWordsSpiral {
             this.elements.clockHand.style.transform = 
                 `translateX(-50%) rotate(${rotation}deg)`;
             
+            // Update escape bar
+            this.updateEscapeBar();
+
             this.updateUI();
 
             if (this.state.timeRemaining <= 0) {
@@ -177,6 +221,27 @@ class ClockworkWordsSpiral {
             }
 
             this.state.gameLoopId = requestAnimationFrame((time) => this.gameLoop(time));
+        }
+    }
+
+    updateEscapeBar() {
+        if (!this.elements.escapeBar || !this.state.spiralLetters.length) return;
+        
+        const maxIndex = Math.min(this.state.currentIndex, this.state.currentSequence.length - 1);
+        const progressPercent = (maxIndex / this.state.currentSequence.length) * 100;
+        
+        const fill = document.getElementById('escape-fill');
+        if (fill) {
+            fill.style.width = `${progressPercent}%`;
+            
+            // Color changes as escape progresses
+            if (progressPercent < 50) {
+                fill.style.background = 'linear-gradient(90deg, #4a90e2, #ffd700)';
+            } else if (progressPercent < 80) {
+                fill.style.background = 'linear-gradient(90deg, #ffaa00, #ff4444)';
+            } else {
+                fill.style.background = 'linear-gradient(90deg, #ff4444, #ff0000)';
+            }
         }
     }
 
@@ -189,8 +254,8 @@ class ClockworkWordsSpiral {
         const maxUnlocked = Math.min(this.state.unlockedLevels, 4);
         const letterPool = this.availableLetters[maxUnlocked];
         
-        // Generate a random sequence of letters (10-15 letters total)
-        const sequenceLength = Math.floor(Math.random() * 6) + 10; // 10-15 letters
+        // Generate sequence of letters (25-30 for Level 1)
+        const sequenceLength = this.sequenceLengths[this.state.level] || 30;
         let sequence = '';
         for (let i = 0; i < sequenceLength; i++) {
             const randomLetter = letterPool[Math.floor(Math.random() * letterPool.length)];
@@ -201,12 +266,18 @@ class ClockworkWordsSpiral {
         this.state.currentIndex = 0;
         this.state.spiralLetters = [];
         this.state.spinePoints = [];
+        this.state.enemyPositionIndex = 0;
+        this.state.lastRevealTime = performance.now();
+        this.state.isEnemyMoving = false;
         
-        // Show all letters around clock face (initially hidden)
+        // Show all letter positions (initially hidden)
         this.showSpiralLayout(sequence);
 
-        // Start revealing letters one by one
-        setTimeout(() => this.revealNextLetter(), 300);
+        // Start the automatic reveal system
+        if (!this.state.gameLoopId) {
+            this.state.lastTime = performance.now();
+            this.state.gameLoopId = requestAnimationFrame((time) => this.revealLettersLoop(time));
+        }
     }
 
     showSpiralLayout(sequence) {
@@ -221,7 +292,7 @@ class ClockworkWordsSpiral {
         for (let i = 0; i < numLetters; i++) {
             const progress = i / Math.max(numLetters - 1, 1);
             const radius = progress * maxRadius;
-            const angle = (progress * Math.PI) + (Math.PI / 2);
+            const angle = (progress * Math.PI) + (Math.PI / 2); // Counter-clockwise spiral
             
             const x = centerX + radius * Math.cos(angle);
             const y = centerY + radius * Math.sin(angle);
@@ -231,7 +302,7 @@ class ClockworkWordsSpiral {
             dot.textContent = letters[i].toUpperCase();
             dot.style.left = `${x - 12}px`;
             dot.style.top = `${y - 12}px`;
-            dot.style.opacity = '0'; // Initially hidden
+            dot.style.opacity = '0'; // Hidden initially
             dot.style.transform = 'scale(0.5)';
             dot.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
             
@@ -264,57 +335,79 @@ class ClockworkWordsSpiral {
             this.elements.enemy.style.top = `${centerY - 10}px`;
         }
         
-        this.elements.wordDisplay.textContent = 'TYPE THE LATTER!';
-        this.elements.feedback.textContent = `Level ${this.state.level} - Home Row Letters Only`;
+        this.elements.wordDisplay.textContent = 'TYPE THE LETTER!';
+        this.elements.feedback.textContent = `Level ${this.state.level} - Keep typing!`;
     }
 
-    revealNextLetter() {
-        if (!this.state.isPlaying || this.state.isPaused) return;
-        
-        if (this.state.currentIndex >= this.state.currentSequence.length) {
-            // All letters revealed, wait for completion
-            setTimeout(() => {
-                // Check if player typed everything correctly
-                if (this.state.lettersTypedThisSession === this.state.currentSequence.length) {
-                    this.onSpiralComplete();
-                } else {
-                    // Time ran out or incomplete
-                    this.endSession(false);
-                }
-            }, 2000);
+    revealLettersLoop(currentTime) {
+        if (!this.state.isPlaying || this.state.isPaused) {
+            this.state.gameLoopId = requestAnimationFrame((time) => this.revealLettersLoop(time));
             return;
         }
 
+        // Check if enemy should move (current target letter typed)
+        if (this.state.currentIndex >= this.state.currentSequence.length) {
+            // All letters revealed - wait for completion check
+            setTimeout(() => {
+                if (this.state.lettersTypedThisSession === this.state.currentSequence.length) {
+                    this.onSpiralComplete();
+                } else {
+                    this.endSession(false);
+                }
+            }, 2000);
+            this.state.gameLoopId = requestAnimationFrame((time) => this.revealLettersLoop(time));
+            return;
+        }
+
+        // Calculate time since last reveal
+        const timeSinceLastReveal = currentTime - this.state.lastRevealTime;
+        
+        if (timeSinceLastReveal >= this.state.revealRate && !this.state.isEnemyMoving) {
+            // Reveal next letter!
+            this.revealNextLetter(currentTime);
+            
+            this.state.gameLoopId = requestAnimationFrame((time) => this.revealLettersLoop(time));
+            return;
+        }
+
+        this.state.gameLoopId = requestAnimationFrame((time) => this.revealLettersLoop(time));
+    }
+
+    revealNextLetter(currentTime) {
+        if (this.state.currentIndex >= this.state.currentSequence.length) return;
+        
         const letter = this.state.currentSequence[this.state.currentIndex];
         const dot = this.state.spiralLetters[this.state.currentIndex];
         
-        if (dot) {
+        if (dot && this.elements.enemy) {
             // Reveal this letter
             dot.style.opacity = '1';
-            dot.style.transform = 'scale(1)';
+            dot.style.transform = 'scale(1.2)'; // Pulse effect
             
-            // Mark as current target (pulsing gold)
+            // Mark as current target
             dot.dataset.isTarget = 'true';
             
-            // Reset feedback to prompt for this specific letter
-            this.elements.feedback.textContent = `Type: "${letter.toUpperCase()}"`;
+            // Update feedback
+            this.elements.feedback.textContent = `TYPE: "${letter.toUpperCase()}"!`;
+            
+            // Move enemy to this position (it's "escaping" along the spiral)
+            this.moveEnemyToPosition(this.state.spinePoints[this.state.currentIndex]);
             
             // Auto-focus input
-            setTimeout(() => this.elements.playerInput.focus(), 100);
+            this.elements.playerInput.focus();
             
-            // Move enemy to this letter position
-            this.updateEnemyPosition(this.state.spinePoints[this.state.currentIndex]);
+            // Reset enemy to stationary state after move
+            setTimeout(() => {
+                this.state.isEnemyMoving = false;
+            }, 300);
         }
 
-        // Schedule next letter reveal (with a slight delay between reveals)
-        this.state.letterRevealInterval = setTimeout(() => {
-            if (this.state.currentIndex < this.state.currentSequence.length - 1) {
-                this.revealNextLetter();
-            }
-        }, 800); // 800ms between letter reveals for comfortable pacing
+        // Update time tracking
+        this.state.lastRevealTime = currentTime;
+        this.state.currentIndex++;
     }
 
-    updateEnemyPosition(position) {
+    moveEnemyToPosition(position) {
         if (!this.elements.enemy || !position) return;
         
         const targetX = position.x - 10; // Center of enemy (20px size)
@@ -322,9 +415,12 @@ class ClockworkWordsSpiral {
         const currentEnemyX = this.elements.enemy.offsetLeft;
         const currentEnemyY = this.elements.enemy.offsetTop;
         
-        // Simple lerp for smooth movement
-        const lerpedX = currentEnemyX + (targetX - currentEnemyX) * 0.5;
-        const lerpedY = currentEnemyY + (targetY - currentEnemyY) * 0.5;
+        // Smooth movement animation
+        this.state.isEnemyMoving = true;
+        
+        // Simple lerp for smooth movement (or instant snap for urgency)
+        const lerpedX = currentEnemyX + (targetX - currentEnemyX) * 0.6;
+        const lerpedY = currentEnemyY + (targetY - currentEnemyY) * 0.6;
         
         this.elements.enemy.style.left = `${lerpedX}px`;
         this.elements.enemy.style.top = `${lerpedY}px`;
@@ -349,14 +445,14 @@ class ClockworkWordsSpiral {
         this.elements.playerInput.value = '';
         
         if (typedChar === targetLetter.toLowerCase()) {
-            // Correct! Move to next letter
+            // Correct! Enemy will move to next position
             this.handleCorrectSpiralLetter();
             
             // Auto-focus for continuous flow
             setTimeout(() => this.elements.playerInput.focus(), 50);
         } else {
             // Wrong letter - visual feedback
-            this.elements.feedback.textContent = `❌ Try "${targetLetter.toUpperCase()}"`;
+            this.elements.feedback.textContent = `❌ Try "${targetLetter.toUpperCase()}"!`;
             this.state.timeRemaining = Math.max(5, this.state.timeRemaining - 1);
             
             // Shake effect on word display
@@ -368,7 +464,7 @@ class ClockworkWordsSpiral {
     }
 
     handleCorrectSpiralLetter() {
-        const currentIndex = this.state.currentIndex;
+        const currentIndex = this.state.currentIndex - 1; // Just completed
         
         // Calculate score for letter (home row bonus!)
         const baseScore = 5;
@@ -386,7 +482,7 @@ class ClockworkWordsSpiral {
         this.state.lettersTypedThisSession++;
         this.elements.feedback.textContent = `+${totalPoints} points! ${isHomeRow ? '🌟' : ''}`;
         
-        // Update spiral to mark completed letter
+        // Update spiral to mark completed letter (dim it)
         const dot = this.state.spiralLetters[currentIndex];
         if (dot) {
             dot.style.opacity = '0.4';
@@ -394,15 +490,12 @@ class ClockworkWordsSpiral {
             dot.dataset.isTarget = 'false';
         }
         
-        // Move to next letter
-        this.state.currentIndex++;
-        
         // Check if all letters completed
         if (this.state.currentIndex >= this.state.currentSequence.length) {
             setTimeout(() => this.onSpiralComplete(), 500);
         } else {
-            // Prepare for next letter reveal
-            setTimeout(() => this.revealNextLetter(), 300);
+            // Enemy will automatically move to next position in next loop iteration
+            setTimeout(() => this.elements.playerInput.focus(), 300);
         }
         
         this.saveProgress();
@@ -430,13 +523,17 @@ class ClockworkWordsSpiral {
 
         // Progress tracking (10 sequences to advance level)
         this.state.lettersTypedThisSession += sequenceLength;
-        const wordsCompleted = Math.floor(this.state.lettersTypedThisSession / sequenceLength);
+        const sequencesCompleted = Math.floor(this.state.lettersTypedThisSession / sequenceLength);
 
-        if (wordsCompleted >= 10 && this.state.level < 4) {
+        if (sequencesCompleted >= 10 && this.state.level < 4) {
             this.state.level++;
             this.state.timeRemaining = 45 + (this.state.level - 1) * 5;
+            
+            // Increase reveal speed at higher levels
+            this.state.revealRate = Math.max(400, 1000 - ((this.state.level - 1) * 200));
+            
             this.elements.feedback.textContent = `LEVEL UP! Now at Level ${this.state.level}`;
-        } else if (wordsCompleted >= 10 && this.state.level >= 4) {
+        } else if (sequencesCompleted >= 10 && this.state.level >= 4) {
             this.endSession(true);
             return;
         }
@@ -450,7 +547,6 @@ class ClockworkWordsSpiral {
     endSession(win) {
         this.state.isPlaying = false;
         cancelAnimationFrame(this.state.gameLoopId);
-        if (this.state.letterRevealInterval) clearInterval(this.state.letterRevealInterval);
 
         if (win) {
             this.showOverlay('🎉 SPIRAL COMPLETE! 🎉', `Total score: ${this.state.score} points.`);
@@ -469,12 +565,13 @@ class ClockworkWordsSpiral {
         this.state.score = 0;
         this.state.lettersTypedThisSession = 0;
         this.state.timeRemaining = 45;
+        this.state.revealRate = 1000;
         
         this.hideOverlay();
         this.elements.startBtn.textContent = 'Start Spiral';
         this.elements.pauseBtn.disabled = true;
         
-        const sampleWord = 'asdf'; // Home row example
+        const sampleWord = 'asdfghjkl;'; // Full home row
         this.elements.wordDisplay.innerHTML = `<span style="color: var(--steam-brass-gold)">SAMPLE: ${sampleWord.toUpperCase()}</span>`;
 
         this.updateUI();
@@ -512,7 +609,7 @@ class ClockworkWordsSpiral {
 
 // Initialize game when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    const game = new ClockworkWordsSpiral();
+    const game = new ClockworkWordsTimedSpiral();
     window.clockworkGame = game;
-    console.log('🔧 Clockwork Words Spiral Drill Mode initialized!');
+    console.log('🔧 Clockwork Words Timed Spiral Drill initialized!');
 });
