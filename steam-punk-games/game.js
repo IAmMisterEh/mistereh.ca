@@ -99,7 +99,8 @@ class ClockworkWords {
     startLevel() {
         this.state.isPlaying = true;
         this.state.isPaused = false;
-        this.state.timeRemaining = 30 + (this.state.level - 1) * 5;
+        // 45 seconds base, +5s per level for progressive difficulty
+        this.state.timeRemaining = 45 + (this.state.level - 1) * 5;
         this.state.wordsTypedThisLevel = 0;
         this.state.wordDisplayLetters = [];
 
@@ -322,7 +323,8 @@ class ClockworkWords {
                 // Advance to next level
                 const currentScore = this.state.score;
                 this.state.level++;
-                this.state.timeRemaining = 30 + (this.state.level - 1) * 5;
+                // +5 seconds per level for progressive difficulty
+                this.state.timeRemaining = 45 + (this.state.level - 1) * 5;
                 
                 // Show level up message
                 this.elements.feedback.textContent = `LEVEL UP! Now at Level ${this.state.level}`;
@@ -368,7 +370,8 @@ class ClockworkWords {
         this.state.isPaused = false;
         this.state.level = 1;
         this.state.score = 0;
-        this.state.timeRemaining = 30;
+        // 45 seconds base for Level 1, +5s per level
+        this.state.timeRemaining = 45;
         this.state.wordsTypedThisLevel = 0;
         this.state.wordDisplayLetters = [];
         cancelAnimationFrame(this.state.gameLoopId);
@@ -392,8 +395,8 @@ class ClockworkWords {
         const timeFormatted = Math.max(0, Math.ceil(this.state.timeRemaining));
         this.elements.timeDisplay.textContent = `${timeFormatted}s`;
 
-        // Timer visual feedback
-        const maxTime = 30 + (this.state.level - 1) * 5;
+        // Timer visual feedback with 45s base timer
+        const maxTime = 45 + (this.state.level - 1) * 5;
         if (timeFormatted <= 5) {
             this.elements.timeDisplay.style.color = '#ff4444';
             this.elements.clockHand.style.background = '#ff4444';
