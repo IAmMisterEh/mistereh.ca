@@ -374,6 +374,7 @@ class ClockworkWordsTimedSpiral {
         this.elements.letterTrail.appendChild(this.elements.escapeBar);
         
         console.log('🔧 Spiral initialized:', { sequenceLength: numLetters, enemy: !!this.elements.enemy, escapeBar: !!this.elements.escapeBar });
+    }
 
     revealLettersLoop(currentTime) {
         if (!this.state.isPlaying || this.state.isPaused) {
