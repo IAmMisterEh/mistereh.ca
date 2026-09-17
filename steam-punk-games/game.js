@@ -320,7 +320,7 @@ class ClockworkWordsTimedSpiral {
             this.state.spinePoints.push({x, y});
         }
         
-        // Add enemy element
+        // Add enemy element and escape bar
         if (!this.elements.enemy) {
             this.elements.enemy = document.createElement('div');
             this.elements.enemy.id = 'steam-enemy';
@@ -332,16 +332,48 @@ class ClockworkWordsTimedSpiral {
             this.elements.enemy.style.boxShadow = '0 0 10px #ff0000, 0 0 20px #ffaa00';
             this.elements.enemy.style.zIndex = '10';
             this.elements.enemy.innerHTML = '⚡';
-            this.elements.letterTrail.appendChild(this.elements.enemy);
         } else {
             // Reset enemy position to center
             this.elements.enemy.style.left = `${centerX - 10}px`;
             this.elements.enemy.style.top = `${centerY - 10}px`;
         }
         
-        this.elements.wordDisplay.textContent = 'TYPE THE LETTER!';
-        this.elements.feedback.textContent = `Level ${this.state.level} - Keep typing!`;
-    }
+        if (!this.elements.escapeBar) {
+            this.elements.escapeBar = document.createElement('div');
+            this.elements.escapeBar.id = 'escape-progress';
+            this.elements.escapeBar.style.position = 'absolute';
+            this.elements.escapeBar.style.bottom = '20px';
+            this.elements.escapeBar.style.left = '50%';
+            this.elements.escapeBar.style.transform = 'translateX(-50%)';
+            this.elements.escapeBar.style.width = '200px';
+            this.elements.escapeBar.style.height = '8px';
+            this.elements.escapeBar.style.background = 'rgba(61, 40, 23, 0.8)';
+            this.elements.escapeBar.style.borderRadius = '4px';
+            this.elements.escapeBar.style.border = '1px solid var(--steam-brass-gold)';
+            this.elements.escapeBar.style.overflow = 'hidden';
+            this.elements.escapeBar.style.zIndex = '5';
+            
+            const fill = document.createElement('div');
+            fill.id = 'escape-fill';
+            fill.style.width = '0%';
+            fill.style.height = '100%';
+            fill.style.background = 'linear-gradient(90deg, #ff4444, #ffaa00)';
+            fill.style.transition = 'width 0.3s ease';
+            
+            this.elements.escapeBar.appendChild(fill);
+        } else {
+            // Reset escape bar
+            const fill = document.getElementById('escape-fill');
+            if (fill) {
+                fill.style.width = '0%';
+            }
+        }
+        
+        // Append both elements to letter trail
+        this.elements.letterTrail.appendChild(this.elements.enemy);
+        this.elements.letterTrail.appendChild(this.elements.escapeBar);
+        
+        console.log('🔧 Spiral initialized:', { sequenceLength: numLetters, enemy: !!this.elements.enemy, escapeBar: !!this.elements.escapeBar });
 
     revealLettersLoop(currentTime) {
         if (!this.state.isPlaying || this.state.isPaused) {
