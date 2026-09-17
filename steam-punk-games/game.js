@@ -246,6 +246,12 @@ class ClockworkWordsTimedSpiral {
     }
 
     startSpiralDrill() {
+        // Stop any existing game loop first
+        if (this.state.gameLoopId) {
+            cancelAnimationFrame(this.state.gameLoopId);
+            this.state.gameLoopId = null;
+        }
+        
         // Clear existing spiral
         if (this.elements.enemy && this.elements.enemy.parentNode) {
             this.elements.enemy.parentNode.removeChild(this.elements.enemy);
@@ -274,10 +280,8 @@ class ClockworkWordsTimedSpiral {
         this.showSpiralLayout(sequence);
 
         // Start the automatic reveal system
-        if (!this.state.gameLoopId) {
-            this.state.lastTime = performance.now();
-            this.state.gameLoopId = requestAnimationFrame((time) => this.revealLettersLoop(time));
-        }
+        this.state.lastTime = performance.now();
+        this.state.gameLoopId = requestAnimationFrame((time) => this.revealLettersLoop(time));
     }
 
     showSpiralLayout(sequence) {
