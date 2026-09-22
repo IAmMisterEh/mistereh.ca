@@ -384,6 +384,18 @@ class ClockworkWordsTimedSpiral {
             return;
         }
 
+        // Debug log every 5th frame
+        if (this.state.currentIndex === 0 && Math.random() < 0.1) {
+            console.log('🔍 Loop check:', { 
+                currentTime: currentTime,
+                lastRevealTime: this.state.lastRevealTime,
+                timeSinceLastReveal: currentTime - this.state.lastRevealTime,
+                revealRate: this.state.revealRate,
+                isEnemyMoving: this.state.isEnemyMoving,
+                currentIndex: this.state.currentIndex
+            });
+        }
+
         // Check if enemy should move (current target letter typed)
         if (this.state.currentIndex >= this.state.currentSequence.length) {
             // All letters revealed - wait for completion check
