@@ -134,6 +134,7 @@ class ClockworkWordsTimedSpiral {
         this.state.isPaused = false;
         this.state.timeRemaining = 45 + (this.state.level - 1) * 5;
         this.state.lettersTypedThisSession = 0;
+        this.state.lastRevealTime = performance.now(); // Reset timer when session starts
         
         // Adjust reveal rate based on level (faster as levels progress)
         this.state.revealRate = 1000 - ((this.state.level - 1) * 200); // Level 1: 1s, Level 4: 400ms
