@@ -254,23 +254,24 @@
       const centerX = canvas.clientWidth / 2;
       const centerY = canvas.clientHeight / 2;
       
-      // Generate points along spiral
-      let angle = 0;
-      let radius = spiralStartRadius;
+      // Generate points along spiral - start from center and expand outward
+      const totalSteps = maxBalls;
+      const maxRadius = Math.min(canvas.clientWidth, canvas.clientHeight) / 2 - 25;
       
-      while (path.length < maxBalls) {
+      for (let step = 0; step < totalSteps; step++) {
+        // Calculate angle and radius for this step
+        const angle = step * 0.25; // Wider spacing between turns
+        const progress = step / totalSteps;
+        const radius = spiralStartRadius + (maxRadius - spiralStartRadius) * progress;
+        
         const x = centerX + radius * Math.cos(angle);
         const y = centerY + radius * Math.sin(angle);
+        
         path.push({ x, y });
-        
-        // Move along spiral
-        angle += 0.15;
-        radius += ballSpacing / (2 * Math.PI) * 0.15;
-        
-        if (radius > Math.min(canvas.clientWidth, canvas.clientHeight) / 2 - 20) {
-          break;
-        }
       }
+      
+      console.log('Generated spiral path with', path.length, 'points. Center:', centerX, centerY);
+      console.log('First 5 points:', path.slice(0, 5));
       
       return path;
     }
