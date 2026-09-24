@@ -246,7 +246,7 @@
     const spiralTurns = 3;
     const spiralStartRadius = 30;
     const ballSpacing = 50; // Distance between balls along spiral
-    const maxBalls = 50; // Maximum positions along spiral before game over
+    const maxBalls = 100; // Maximum positions along spiral before game over (increased from 50)
     
     // Generate spiral path with discrete positions
     function generateSpiralPath() {
@@ -364,6 +364,7 @@
         }
         
         const point = spiralPath[this.position];
+        this.element.style.display = 'flex'; // Ensure it's visible
         this.element.style.left = (point.x - 20) + 'px';
         this.element.style.top = (point.y - 20) + 'px';
       }
@@ -426,8 +427,28 @@
       if (ballsSpawned >= ballsToSpawn) return;
       
       const letter = new Ball('').getRandomLetter();
-      // Insert at front (position 0 relative to boss, but actual position = bossPosition + 1)
+      // Boss moves first, then new ball appears in front of boss
+      bossPosition += 1;
+      if (boss) boss.updatePosition(bossPosition);
+      
+      // Check if boss reached end before spawning ball
+      if (bossPosition >= spiralPath.length - 1) {
+        gameOver();
+        return;
+      }
+      
       const newPosition = bossPosition + 1;
+      
+      // Debug: log first spawn
+      if (ballsSpawned === 0) {
+        console.log('First spawn: bossPosition=', bossPosition, 'newPosition=', newPosition, 'pathLength=', spiralPath.length);
+      }
+      
+      // Safety check: ensure position is valid
+      if (newPosition >= spiralPath.length) {
+        console.error('Position out of bounds!', newPosition, 'vs', spiralPath.length);
+        return;
+      }
       
       // Shift all existing balls forward
       balls.forEach(ball => {
@@ -560,11 +581,9 @@
       spawnTimer += deltaTime;
       if (spawnTimer > spawnInterval && ballsSpawned < ballsToSpawn) {
         spawnBall();
-        bossPosition += 1;
-        if (boss) boss.updatePosition(bossPosition);
         spawnTimer = 0;
         
-        // Check if boss reached end
+        // Check if boss reached end (already checked in spawnBall, but double-check)
         if (bossPosition >= spiralPath.length - 1) {
           gameOver();
           return;
