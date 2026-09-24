@@ -368,6 +368,11 @@
         this.element.style.display = 'flex'; // Ensure it's visible
         this.element.style.left = (point.x - 20) + 'px';
         this.element.style.top = (point.y - 20) + 'px';
+        
+        // Debug: log position for first few balls
+        if (this.position < 5) {
+          console.log(`Ball at position ${this.position}: (${point.x}, ${point.y})`);
+        }
       }
       
       destroy() {
