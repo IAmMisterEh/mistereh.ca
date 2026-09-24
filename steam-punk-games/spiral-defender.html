@@ -432,7 +432,10 @@
     function spawnBall() {
       if (ballsSpawned >= ballsToSpawn) return;
       
-      const letter = new Ball('').getRandomLetter();
+      // Get a random letter without creating a full ball
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const letter = letters[Math.floor(Math.random() * letters.length)];
+      
       // Boss moves first, then new ball appears in front of boss
       bossPosition += 1;
       if (boss) boss.updatePosition(bossPosition);
