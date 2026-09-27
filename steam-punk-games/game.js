@@ -293,41 +293,36 @@ class ClockworkWordsTimedSpiralFixed {
         const numLetters = letters.length;
         const centerX = 150; // Center of clock face
         const centerY = 150;
-        const maxRadius = 130;
-        
-        // FIX: Start letters at a minimum radius to avoid overlap with boss
-        const minRadius = 25; // Minimum distance from center
+        const radius = 110; // Fixed radius - letters in a circle
         
         for (let i = 0; i < numLetters; i++) {
-            const progress = i / Math.max(numLetters - 1, 1);
-            // FIX: Use minRadius to ensure first letter is visible
-            const radius = minRadius + progress * (maxRadius - minRadius);
-            const angle = (progress * Math.PI) + (Math.PI / 2);
+            // Arrange letters in a circle (360 degrees = 2*PI radians)
+            const angle = (i / numLetters) * (2 * Math.PI) - (Math.PI / 2);
             
             const x = centerX + radius * Math.cos(angle);
             const y = centerY + radius * Math.sin(angle);
 
             const dot = document.createElement('div');
             dot.className = 'letter-dot';
-            // FIX: Show letter immediately but hidden until reveal
-            dot.textContent = letters[i].toUpperCase(); // Display uppercase for visibility
-            dot.style.left = `${x - 14}px`; // Slightly larger (14px instead of 12px)
+            // Show letter immediately - visible from the start!
+            dot.textContent = letters[i].toUpperCase();
+            dot.style.left = `${x - 14}px`;
             dot.style.top = `${y - 14}px`;
-            dot.style.opacity = '0';
-            dot.style.transform = 'scale(0.5)';
-            dot.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-            dot.style.width = '28px'; // Larger width
-            dot.style.height = '28px'; // Larger height
-            dot.style.fontSize = '14px'; // Larger font
+            dot.style.opacity = '1';
+            dot.style.transform = 'scale(1)';
+            dot.style.width = '28px';
+            dot.style.height = '28px';
+            dot.style.fontSize = '14px';
             
             const isVowel = 'aeiouAEIOU'.includes(letters[i]);
             dot.style.background = isVowel ? '#ffd700' : '#b89e6c';
-            dot.dataset.letter = letters[i]; // Store lowercase letter
+            dot.dataset.letter = letters[i];
             dot.dataset.letterIndex = i;
             dot.dataset.isTarget = 'false';
             
             this.elements.letterTrail.appendChild(dot);
             this.state.spiralLetters.push(dot);
+            // Store circular position (same radius for all)
             this.state.spinePoints.push({x, y, radius});
         }
         
