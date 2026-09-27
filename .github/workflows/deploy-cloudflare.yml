@@ -28,6 +28,3 @@ jobs:
         directory: .
         projectName: clockwork-words-v2
 
-    - name: Output deployment URL
-      run: |
-        echo "✅ Deployment successful!"
