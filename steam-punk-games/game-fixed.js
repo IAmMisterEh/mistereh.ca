@@ -191,11 +191,7 @@ class ClockworkWordsTimedSpiralFixed {
 
     gameLoop(currentTime) {
         if (!this.state.isPaused && this.state.isPlaying) {
-            let deltaTime = (currentTime - this.state.lastTime) / 1000;
-            
-            // FIX: Cap deltaTime to prevent huge jumps on first frame or after pauses
-            if (deltaTime > 1.0) deltaTime = 1.0;
-            
+            const deltaTime = (currentTime - this.state.lastTime) / 1000;
             this.state.lastTime = currentTime;
             
             this.state.timeRemaining -= deltaTime;
@@ -258,7 +254,7 @@ class ClockworkWordsTimedSpiralFixed {
         let sequence = '';
         for (let i = 0; i < sequenceLength; i++) {
             const randomLetter = letterPool[Math.floor(Math.random() * letterPool.length)];
-            sequence += randomLetter;
+            sequence += randomLetter; // Keep lowercase!
         }
         
         this.state.currentSequence = sequence;
@@ -270,20 +266,14 @@ class ClockworkWordsTimedSpiralFixed {
         this.state.isEnemyMoving = false;
         this.state.spawnCounter = 0;
         
-        this.state.enemyCurrentX = 150 + 15;
+        // FIX: Start enemy slightly offset from center (not exactly on center)
+        this.state.enemyCurrentX = 150 + 15; // Offset right by 15px (half of letter dot size + spacing)
         this.state.enemyCurrentY = 150;
         
         this.showSpiralLayout(sequence);
 
-        // Reveal the FIRST letter IMMEDIATELY
-        this.revealNextLetter(performance.now());
-        
-        // FIX: Start BOTH the reveal loop AND the timer loop!
         this.state.lastTime = performance.now();
-        this.state.gameLoopId = requestAnimationFrame((time) => {
-            this.gameLoop(time);
-            this.revealLettersLoop(time);
-        });
+        this.state.gameLoopId = requestAnimationFrame((time) => this.revealLettersLoop(time));
     }
 
     showSpiralLayout(sequence) {
@@ -394,13 +384,14 @@ class ClockworkWordsTimedSpiralFixed {
             return;
         }
 
-        // Check if all letters have been revealed
         if (this.state.currentIndex >= this.state.currentSequence.length) {
-            // All letters revealed - just wait for player to finish typing
-            // Check every second if all letters are typed
-            if (this.state.lettersTypedThisSession >= this.state.currentSequence.length) {
-                setTimeout(() => this.onSpiralComplete(), 500);
-            }
+            setTimeout(() => {
+                if (this.state.lettersTypedThisSession === this.state.currentSequence.length) {
+                    this.onSpiralComplete();
+                } else {
+                    this.endSession(false);
+                }
+            }, 2000);
             this.state.gameLoopId = requestAnimationFrame((time) => this.revealLettersLoop(time));
             return;
         }
@@ -476,24 +467,16 @@ class ClockworkWordsTimedSpiralFixed {
     }
 
     validateSpiralLetter(typedChar) {
-        // FIX: Get the ACTUAL target letter (the one that was just revealed)
-        // currentIndex points to the NEXT letter to be revealed, so target is at currentIndex - 1
-        const targetIndex = this.state.currentIndex - 1;
-        
-        if (targetIndex < 0 || targetIndex >= this.state.currentSequence.length) {
-            // No letter to type yet or all letters revealed
-            this.elements.playerInput.value = '';
-            return;
-        }
-        
-        const targetLetter = this.state.currentSequence[targetIndex];
+        // FIX: Get the ACTUAL target letter (lowercase) from the sequence
+        const currentIndex = this.state.currentIndex;
+        const targetLetter = this.state.currentSequence[currentIndex];
         
         // Clear input
         this.elements.playerInput.value = '';
         
         if (typedChar === targetLetter) {
             // Correct! Trigger shooting effect
-            this.handleCorrectSpiralLetter(typedChar, targetIndex);
+            this.handleCorrectSpiralLetter(typedChar);
             setTimeout(() => this.elements.playerInput.focus(), 50);
         } else {
             this.elements.feedback.textContent = `❌ Try "${targetLetter}"!`;
@@ -506,12 +489,11 @@ class ClockworkWordsTimedSpiralFixed {
         }
     }
 
-    handleCorrectSpiralLetter(typedChar, completedIndex) {
-        // completedIndex is passed in (the letter that was just typed)
-        const currentIndex = completedIndex;
+    handleCorrectSpiralLetter(typedChar) {
+        const currentIndex = this.state.currentIndex - 1;
         
         // FIX: Create shooting effect!
-        this.createShootingEffect(typedChar, currentIndex);
+        this.createShootingEffect(typedChar);
         
         const baseScore = 5;
         const timeBonus = Math.floor(this.state.timeRemaining) * 2;
@@ -536,17 +518,7 @@ class ClockworkWordsTimedSpiralFixed {
             dot.dataset.isTarget = 'false';
         }
         
-        // FIX: Move enemy to next position when letter is typed correctly!
-        const nextIndex = currentIndex + 1;
-        if (nextIndex < this.state.currentSequence.length) {
-            const nextPoint = this.state.spinePoints[nextIndex];
-            if (nextPoint) {
-                this.moveEnemyToPosition(nextPoint);
-            }
-        }
-        
-        // Check if all letters completed
-        if (this.state.lettersTypedThisSession >= this.state.currentSequence.length) {
+        if (this.state.currentIndex >= this.state.currentSequence.length) {
             setTimeout(() => this.onSpiralComplete(), 500);
         } else {
             setTimeout(() => this.elements.playerInput.focus(), 300);
@@ -557,10 +529,10 @@ class ClockworkWordsTimedSpiralFixed {
     }
 
     // FIX: Create shooting effect when letter is typed correctly
-    createShootingEffect(letter, targetIndex) {
+    createShootingEffect(letter) {
         // Find the target letter dot
-        const targetDot = this.state.spiralLetters[targetIndex];
-        if (!targetDot || !this.elements.enemy) return;
+        const currentDot = this.state.spiralLetters[this.state.currentIndex];
+        if (!currentDot || !this.elements.enemy) return;
         
         const bullet = document.createElement('div');
         bullet.style.position = 'absolute';
@@ -581,7 +553,7 @@ class ClockworkWordsTimedSpiralFixed {
         this.elements.letterTrail.appendChild(bullet);
         
         // Animate bullet moving to target
-        const targetPoint = this.state.spinePoints[targetIndex];
+        const targetPoint = this.state.spinePoints[this.state.currentIndex];
         if (targetPoint) {
             const deltaX = targetPoint.x - startX;
             const deltaY = targetPoint.y - startY;
@@ -722,8 +694,7 @@ class ClockworkWordsTimedSpiralFixed {
         this.elements.scoreDisplay.textContent = this.state.score;
         
         const timeFormatted = Math.max(0, Math.ceil(this.state.timeRemaining));
-        // FIX: HTML already has 's' after the span, so just set the number
-        this.elements.timeDisplay.textContent = `${timeFormatted}`;
+        this.elements.timeDisplay.textContent = `${timeFormatted}s`;
 
         if (timeFormatted <= 5) {
             this.elements.timeDisplay.style.color = '#ff4444';
