@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Steam Defender - Spiral Mode</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Georgia', serif;
+      background: linear-gradient(135deg, #1a1510 0%, #2d1e15 100%);
+      color: #d4a574;
+      overflow: hidden;
+      min-height: 100vh;
+    }
+    
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    #header {
+      padding: 15px 20px;
+      background: rgba(0, 0, 0, 0.7);
+      border-bottom: 3px solid #8b6914;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+    
+    #game-canvas {
+      flex: 1;
+      background: radial-gradient(circle at center, #2a1f15 0%, #1a1510 100%);
+      position: relative;
+    }
+    
+    #ui-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 20;
+      pointer-events: none;
+    }
+    
+    .message {
+      font-size: 2.5rem;
+      font-weight: bold;
+      text-shadow: 0 0 20px rgba(212, 165, 116, 0.8);
+      margin-bottom: 20px;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+    
+    .message.show {
+      opacity: 1;
+    }
+    
+    #game-info {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border: 2px solid #8b6914;
+      border-radius: 8px;
+      font-family: monospace;
+      z-index: 5;
+    }
+    
+    #game-info div {
+      margin: 5px 0;
+    }
+    
+    .target-letter {
+      color: #ff6b35;
+      font-weight: bold;
+      font-size: 1.2em;
+    }
+    
+    #cannon {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 80px;
+      background: linear-gradient(180deg, #654321 0%, #3d2817 100%);
+      border: 3px solid #8b6914;
+      border-radius: 5px 5px 0 0;
+      z-index: 5;
+    }
+    
+    #cannon::before {
+      content: '';
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 25px;
+      background: #4a3423;
+      border: 2px solid #8b6914;
+      border-radius: 3px 3px 0 0;
+    }
+    
+    .projectile {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: radial-gradient(circle, #ffcc00 0%, #ff6b35 100%);
+      border: 2px solid #8b6914;
+      border-radius: 50%;
+      box-shadow: 0 0 15px #ff6b35;
+      z-index: 4;
+    }
+    
+    .enemy {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.4rem;
+      border: 3px solid;
+      cursor: default;
+      z-index: 3;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+    }
+    
+    .enemy-letter {
+      pointer-events: none;
+      text-shadow: 0 0 5px rgba(0, 0, 0, 0.9);
+    }
+    
+    .explosion {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 6;
+      animation: explode 0.6s ease-out forwards;
+    }
+    
+    @keyframes explode {
+      0% {
+        transform: scale(0.5);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(2);
+        opacity: 0;
+      }
+    }
+    
+    .spiral-guide {
+      position: absolute;
+      pointer-events: none;
+      opacity: 0.3;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="header">
+      <div>⚙️ STEAM DEFENDER</div>
+      <div>Round: <span id="round-display">1</span></div>
+    </div>
+    
+    <div id="game-canvas">
+      <div id="ui-overlay">
+        <div id="start-message" class="message show">STEAM DEFENDER<br><span style="font-size: 1.2rem">Type the closest enemy letter!<br>Don't let any escape!</span><br><br><span style="font-size: 1rem">Press SPACE to start</span></div>
+        <div id="victory-message" class="message">ROUND COMPLETE!<br><span id="final-score"></span><br><br><span style="font-size: 1rem">Next round in...</span></div>
+        <div id="game-over-message" class="message">GAME OVER<br><span id="final-score"></span><br><br><span style="font-size: 1rem">Press SPACE to retry</span></div>
+      </div>
+      
+      <div id="game-info">
+        <div>Score: <span id="score">0</span> / <span id="round-target">50</span></div>
+        <div>Enemies: <span id="enemies-left">0</span></div>
+        <div>Target: <span id="target-letter" class="target-letter">?</span></div>
+      </div>
+      
+      <div id="cannon"></div>
+    </div>
+  </div>
+  
+  <script>
+    const canvas = document.getElementById('game-canvas');
+    const startMessage = document.getElementById('start-message');
+    const gameOverMessage = document.getElementById('game-over-message');
+    const victoryMessage = document.getElementById('victory-message');
+    const finalScore = document.getElementById('final-score');
+    const scoreDisplay = document.getElementById('score');
+    const roundDisplay = document.getElementById('round-display');
+    const roundTargetDisplay = document.getElementById('round-target');
+    const enemiesLeftDisplay = document.getElementById('enemies-left');
+    const targetDisplay = document.getElementById('target-letter');
+    
+    let gameRunning = false;
+    let round = 1;
+    let score = 0;
+    let enemies = [];
+    let projectiles = [];
+    let spawnTimer = 0;
+    let spawnInterval = 2000;
+    let lastTime = 0;
+    let roundTarget = 50;
+    let enemiesRemaining = 0;
+    
+    // Spiral parameters
+    const centerX = canvas.clientWidth / 2;
+    const centerY = canvas.clientHeight / 2;
+    const spiralStartRadius = 20;
+    const spiralEndRadius = Math.min(canvas.clientWidth, canvas.clientHeight) / 2 - 30;
+    const spiralTurns = 3;
+    const spiralAngleStep = 0.1;
+    
+    // Generate spiral path
+    function generateSpiralPath() {
+      const path = [];
+      let angle = 0;
+      let radius = spiralStartRadius;
+      
+      while (radius < spiralEndRadius) {
+        const x = centerX + radius * Math.cos(angle);
+        const y = centerY + radius * Math.sin(angle);
+        path.push({ x, y });
+        
+        angle += spiralAngleStep;
+        radius = spiralStartRadius + (angle / (2 * Math.PI)) * (spiralEndRadius - spiralStartRadius) / spiralTurns;
+      }
+      
+      return path;
+    }
+    
+    const spiralPath = generateSpiralPath();
+    
+    // Draw spiral guide
+    function drawSpiralGuide() {
+      const guide = document.createElement('canvas');
+      guide.className = 'spiral-guide';
+      guide.width = canvas.clientWidth;
+      guide.height = canvas.clientHeight;
+      const ctx = guide.getContext('2d');
+      
+      ctx.strokeStyle = 'rgba(139, 105, 20, 0.3)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      
+      spiralPath.forEach((point, i) => {
+        if (i === 0) ctx.moveTo(point.x, point.y);
+        else ctx.lineTo(point.x, point.y);
+      });
+      
+      ctx.stroke();
+      canvas.appendChild(guide);
+    }
+    
+    drawSpiralGuide();
+    
+    class Enemy {
+      constructor() {
+        // Spawn at center of spiral
+        this.positionIndex = 0;
+        this.speed = 1 + round * 0.3;
+        this.letter = this.getRandomLetter();
+        this.element = this.createElement();
+      }
+      
+      getRandomLetter() {
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        return letters[Math.floor(Math.random() * letters.length)];
+      }
+      
+      createElement() {
+        const el = document.createElement('div');
+        el.className = 'enemy';
+        
+        // Random color based on letter
+        const hue = (this.letter.charCodeAt(0) * 23) % 360;
+        el.style.backgroundColor = `hsl(${hue}, 60%, 40%)`;
+        el.style.borderColor = `hsl(${hue}, 70%, 60%)`;
+        el.style.color = '#fff';
+        
+        const letterEl = document.createElement('span');
+        letterEl.className = 'enemy-letter';
+        letterEl.textContent = this.letter;
+        el.appendChild(letterEl);
+        
+        canvas.appendChild(el);
+        return el;
+      }
+      
+      update() {
+        this.positionIndex += this.speed;
+        
+        if (this.positionIndex >= spiralPath.length - 1) {
+          // Reached the end!
+          return 'escaped';
+        }
+        
+        const index = Math.min(Math.floor(this.positionIndex), spiralPath.length - 1);
+        const point = spiralPath[index];
+        
+        this.element.style.left = (point.x - 25) + 'px';
+        this.element.style.top = (point.y - 25) + 'px';
+        
+        return 'active';
+      }
+      
+      destroy() {
+        this.element.remove();
+      }
+    }
+    
+    class Projectile {
+      constructor(targetX, targetY) {
+        this.x = canvas.clientWidth / 2;
+        this.y = canvas.clientHeight - 40; // From cannon position
+        this.targetX = targetX;
+        this.targetY = targetY;
+        this.speed = 8;
+        this.element = this.createElement();
+      }
+      
+      createElement() {
+        const el = document.createElement('div');
+        el.className = 'projectile';
+        canvas.appendChild(el);
+        return el;
+      }
+      
+      update() {
+        const dx = this.targetX - this.x;
+        const dy = this.targetY - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < this.speed) {
+          this.element.remove();
+          return 'hit';
+        }
+        
+        const angle = Math.atan2(dy, dx);
+        this.x += Math.cos(angle) * this.speed;
+        this.y += Math.sin(angle) * this.speed;
+        
+        this.element.style.left = (this.x - 6) + 'px';
+        this.element.style.top = (this.y - 6) + 'px';
+        
+        return 'active';
+      }
+    }
+    
+    function createExplosion(x, y) {
+      const explosion = document.createElement('div');
+      explosion.className = 'explosion';
+      explosion.style.left = (x - 30) + 'px';
+      explosion.style.top = (y - 30) + 'px';
+      
+      // Random color
+      const hue = Math.random() * 360;
+      explosion.style.background = `radial-gradient(circle, hsl(${hue}, 80%, 60%) 0%, hsl(${hue}, 90%, 40%) 100%)`;
+      
+      canvas.appendChild(explosion);
+      
+      setTimeout(() => explosion.remove(), 600);
+    }
+    
+    function getClosestEnemy() {
+      if (enemies.length === 0) return null;
+      
+      // Find enemy closest to the end of the spiral (highest positionIndex)
+      let closest = enemies[0];
+      let maxIndex = -1;
+      
+      enemies.forEach(enemy => {
+        if (enemy.positionIndex > maxIndex) {
+          maxIndex = enemy.positionIndex;
+          closest = enemy;
+        }
+      });
+      
+      return closest;
+    }
+    
+    function updateTargetDisplay() {
+      const closest = getClosestEnemy();
+      targetDisplay.textContent = closest ? closest.letter : '?';
+    }
+    
+    function handleInput(key) {
+      if (!gameRunning) return;
+      
+      const closest = getClosestEnemy();
+      if (!closest) return;
+      
+      if (key.toUpperCase() === closest.letter) {
+        // Correct! Fire cannon
+        score += 10;
+        scoreDisplay.textContent = score;
+        
+        // Get target position
+        const index = Math.min(Math.floor(closest.positionIndex), spiralPath.length - 1);
+        const targetPoint = spiralPath[index];
+        
+        // Create projectile
+        const projectile = new Projectile(targetPoint.x, targetPoint.y);
+        projectiles.push(projectile);
+        
+        // Remove enemy after projectile hits
+        const enemyIndex = enemies.indexOf(closest);
+        setTimeout(() => {
+          if (enemies[enemyIndex]) {
+            createExplosion(targetPoint.x, targetPoint.y);
+            enemies[enemyIndex].destroy();
+            enemies.splice(enemyIndex, 1);
+            enemiesRemaining--;
+            enemiesLeftDisplay.textContent = enemiesRemaining;
+            updateTargetDisplay();
+            
+            // Check if round is complete
+            if (score >= roundTarget && enemiesRemaining <= 0) {
+              roundComplete();
+            }
+          }
+        }, 200); // Projectile travel time
+      } else {
+        // Wrong letter - just visual feedback, no penalty
+      }
+    }
+    
+    function gameOver() {
+      gameRunning = false;
+      finalScore.textContent = `Round ${round} - Enemy Escaped!`;
+      gameOverMessage.classList.add('show');
+    }
+    
+    function roundComplete() {
+      gameRunning = false;
+      finalScore.textContent = `Round ${round} Complete! Score: ${score}/${roundTarget}`;
+      victoryMessage.classList.add('show');
+      
+      setTimeout(() => {
+        round++;
+        startGame();
+      }, 2000);
+    }
+    
+    function startGame() {
+      // Reset for new round
+      enemies.forEach(e => e.destroy());
+      enemies = [];
+      projectiles.forEach(p => p.element.remove());
+      projectiles = [];
+      score = 0;
+      spawnTimer = 0;
+      
+      // Calculate round parameters
+      roundTarget = 50 + (round - 1) * 25;
+      enemiesRemaining = 5 + (round - 1) * 2;
+      spawnInterval = Math.max(600, 2500 - round * 200);
+      
+      scoreDisplay.textContent = score;
+      roundTargetDisplay.textContent = roundTarget;
+      enemiesLeftDisplay.textContent = enemiesRemaining;
+      roundDisplay.textContent = round;
+      updateTargetDisplay();
+      
+      startMessage.classList.remove('show');
+      gameOverMessage.classList.remove('show');
+      victoryMessage.classList.remove('show');
+      
+      gameRunning = true;
+      lastTime = performance.now();
+      requestAnimationFrame(gameLoop);
+    }
+    
+    function gameLoop(currentTime) {
+      if (!gameRunning) return;
+      
+      const deltaTime = currentTime - lastTime;
+      lastTime = currentTime;
+      
+      // Spawn enemies
+      spawnTimer += deltaTime;
+      if (spawnTimer > spawnInterval) {
+        enemies.push(new Enemy());
+        spawnTimer = 0;
+        updateTargetDisplay();
+      }
+      
+      // Update enemies
+      const escapedEnemies = [];
+      enemies.forEach(enemy => {
+        const status = enemy.update();
+        if (status === 'escaped') {
+          escapedEnemies.push(enemy);
+        }
+      });
+      
+      // Remove escaped enemies - immediate game over
+      if (escapedEnemies.length > 0) {
+        gameOver();
+      }
+      
+      // Update projectiles
+      projectiles = projectiles.filter(p => p.update() === 'active');
+      
+      requestAnimationFrame(gameLoop);
+    }
+    
+    // Event listeners
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !gameRunning) {
+        startGame();
+      } else if (gameRunning && e.code.length === 1) {
+        handleInput(e.key);
+      }
+    });
+    
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      // Recalculate center
+      // In a full implementation, you'd regenerate the spiral path
+    });
+  </script>
+</body>
+</html>
