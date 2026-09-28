@@ -1,0 +1,3 @@
+# Placeholder for Cloudflare Account ID (will be created automatically)
+CLOUDFLARE_ACCOUNT_ID=placeholder
+CLOUDFLARE_API_TOKEN=placeholder
