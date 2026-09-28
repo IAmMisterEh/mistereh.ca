@@ -21,10 +21,11 @@ jobs:
       
     - name: Deploy to Cloudflare Pages
       id: deployment
-      uses: cloudflare/pages-action@v1
+      uses: cloudflare/pages-action@1
       with:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         directory: .
         projectName: clockwork-words-v2
+        gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
