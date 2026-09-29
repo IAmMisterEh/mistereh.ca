@@ -23,9 +23,9 @@ jobs:
       id: deployment
       uses: andykenward/github-actions-cloudflare-pages@v3.6.0
       with:
-        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        cloudflare-api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        cloudflare-account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        cloudflare-project-name: clockwork-words-v2
         directory: .
-        projectName: clockwork-words-v2
-        gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
 
