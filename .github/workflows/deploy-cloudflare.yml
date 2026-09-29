@@ -47,10 +47,10 @@ jobs:
         echo "CLOUDFLARE_API_TOKEN configured: ${CLOUDFLARE_API_TOKEN:+yes}"
         # Create wrangler.toml if it doesn't exist
         if [ ! -f wrangler.toml ]; then
-          cat > wrangler.toml <<EOF
+          cat >> wrangler.toml <<'ENDCONFIG'
 type = "pages"
 account_id = "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
-EOF
+ENDCONFIG
           echo "✅ Created wrangler.toml"
         fi
     
