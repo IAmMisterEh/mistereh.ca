@@ -1,0 +1,6 @@
+name = "clockwork-words-v2"
+type = "pages"
+account_id = "a60a4cc516ca31e22aa31f41283edf06"
+
+[vars]
+ENVIRONMENT = "production"
