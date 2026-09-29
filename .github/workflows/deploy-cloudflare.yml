@@ -21,7 +21,7 @@ jobs:
       
     - name: Deploy to Cloudflare Pages
       id: deployment
-      uses: cloudflare/pages-action@1  # Use action v1 (latest stable)
+      uses: cloudflare/pages-action@v1
       with:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
