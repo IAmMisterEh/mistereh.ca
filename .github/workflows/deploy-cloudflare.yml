@@ -40,20 +40,6 @@ jobs:
         fi
         echo "✅ Credentials look good!"
 
-    - name: Configure Wrangler
-      env:
-        WRANGLER_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      run: |
-        echo "📝 Creating wrangler.toml..."
-        cat > wrangler.toml <<'WRANGLER_EOF'
-type = "pages"
-account_id = "$WRANGLER_ACCOUNT_ID"
-WRANGLER_EOF
-        # Replace the placeholder with actual account ID
-        sed -i "s/\$WRANGLER_ACCOUNT_ID/$WRANGLER_ACCOUNT_ID/" wrangler.toml
-        cat wrangler.toml
-        echo "✅ Created wrangler.toml"
-
     - name: Deploy to Cloudflare Pages
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
