@@ -28,4 +28,5 @@ jobs:
         cloudflare-project-name: clockwork-words-v2
         directory: .
         github-token: ${{ secrets.GITHUB_TOKEN }}
+        github-environment: production
 
