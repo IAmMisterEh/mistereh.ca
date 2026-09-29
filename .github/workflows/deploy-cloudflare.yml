@@ -21,10 +21,9 @@ jobs:
       
     - name: Deploy to Cloudflare Pages
       id: deployment
-      uses: cloudflare/wrangler-action@v3
+      uses: cloudflare/pages-action@v1
       with:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        directory: ./steam-punk-games
         projectName: clockwork-words-v2
-        environment: production
-
