@@ -35,13 +35,15 @@ jobs:
         
         ACCOUNT_ID="${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
         if [[ ! "$ACCOUNT_ID" =~ ^[a-f0-9]{32}$ ]]; then
-          echo "❌ ERROR: Invalid CLOUDFLARE_ACCOUNT_ID format"
+          echo "❌ ERROR: Invalid CLOUDFLARE_ACCOUNT_ID format (must be 32-char hex)"
           exit 1
         fi
         
         TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}"
-        if [[ ! "$TOKEN" =~ ^cfk_ ]]; then
-          echo "❌ ERROR: CLOUDFLARE_API_TOKEN must start with cfk_"
+        # Accept both Global API Keys (cfk_*) and scoped API Tokens (cfat_*)
+        if [[ ! "$TOKEN" =~ ^(cfk_|cfat_) ]]; then
+          echo "❌ ERROR: CLOUDFLARE_API_TOKEN must start with cfk_* or cfat_*"
+          echo "   Current value starts with: ${TOKEN:0:4}..."
           exit 1
         fi
         
