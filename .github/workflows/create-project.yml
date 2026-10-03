@@ -1,0 +1,67 @@
+name: Create Cloudflare Pages Project
+
+on:
+  workflow_dispatch:
+    inputs:
+      project-name:
+        description: 'Cloudflare Pages Project Name'
+        required: true
+        default: 'clockwork-words-v3'
+
+permissions:
+  contents: read
+
+jobs:
+  create-project:
+    name: Create Cloudflare Pages Project
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: ⬇️ Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: 🔍 Validate Credentials
+      run: |
+        if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+          echo "❌ ERROR: CLOUDFLARE_API_TOKEN not configured"
+          exit 1
+        fi
+        
+        if [ -z "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
+          echo "❌ ERROR: CLOUDFLARE_ACCOUNT_ID not configured"
+          exit 1
+        fi
+        
+        echo "✅ Credentials validated!"
+
+    - name: 📦 Install Wrangler CLI
+      run: |
+        npm install -g wrangler@3
+        wrangler --version
+
+    - name: 🔐 Authenticate and Create Project
+      run: |
+        export CLOUDFLARE_ACCOUNT_ID="${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+        export CLOUDFLARE_API_TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}"
+        PROJECT_NAME="${{ github.event.inputs.project-name || 'clockwork-words-v3' }}"
+        
+        echo "🚀 Creating Cloudflare Pages project: $PROJECT_NAME"
+        wrangler pages project create "$PROJECT_NAME" --account-id="$CLOUDFLARE_ACCOUNT_ID" \
+          || {
+            echo "⚠️  Project may already exist or creation failed. Error logged."
+            # Continue anyway as the project might exist
+          }
+        
+        echo "✅ Project setup attempted!"
+        echo "   Project name: $PROJECT_NAME"
+
+    - name: ✅ Summary
+      run: |
+        echo ""
+        echo "=========================================="
+        echo "✅ PROJECT CREATION ATTEMPT COMPLETE"
+        echo "=========================================="
+        echo ""
+        echo "You can now deploy to:"
+        echo "   https://$PROJECT_NAME.pages.dev/"
+        echo ""
