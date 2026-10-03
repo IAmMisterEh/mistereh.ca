@@ -79,6 +79,8 @@ jobs:
         # Enable caching for faster builds
         gitHubToken: ${{ secrets.GITHUB_TOKEN }}
         wranglerVersion: '3.x'
+        # Ensure action is available from GitHub Actions Marketplace
+        # The action will auto-create project if it doesn't exist
 
     - name: 🌐 Deployment Success Check
       if: success()
