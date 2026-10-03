@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clockwork Words v3.0 - Spiral Escape</title>
+    <link rel="stylesheet" href="game.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen active">
+            <h1 class="main-title">CLOCKWORK WORDS v3.0</h1>
+            <h2 class="subtitle">SPIRAL ESCAPE</h2>
+            <div class="description">
+                <p>Type the letters as they reach the center of the spiral escape!</p>
+                <p>Each successful press sends letters spiraling outward.</p>
+            </div>
+            <div id="keyboard-display" class="keyboard-display">
+                <!-- Keyboard layout will be rendered here -->
+            </div>
+            <button id="start-btn" class="steam-button">INITIATE SEQUENCE</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div id="hud">
+                <div class="hud-item">
+                    <span class="label">LEVEL</span>
+                    <span id="level-display">1/7</span>
+                </div>
+                <div class="hud-item">
+                    <span class="label">STREAK</span>
+                    <span id="streak-display">0</span>
+                </div>
+                <div class="hud-item">
+                    <span class="label">SCORE</span>
+                    <span id="score-display">0</span>
+                </div>
+            </div>
+            <canvas id="game-canvas"></canvas>
+            <div id="progress-bar" class="progress-bar">
+                <div id="progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="screen">
+            <h2 class="title">SYSTEM FAILURE</h2>
+            <p id="final-message"></p>
+            <div id="stats-display">
+                <p>Level Reached: <span id="final-level"></span></p>
+                <p>Final Score: <span id="final-score"></span></p>
+                <p>Best Streak: <span id="final-streak"></span></p>
+            </div>
+            <button id="restart-btn" class="steam-button">REBOOT SYSTEM</button>
+        </div>
+
+        <!-- Victory Screen -->
+        <div id="victory-screen" class="screen">
+            <h2 class="title title-victory">SEQUENCE COMPLETE!</h2>
+            <p>All 7 levels cleared. Escape protocol successful.</p>
+            <div id="stats-display">
+                <p>Final Score: <span id="victory-score"></span></p>
+                <p>Best Streak: <span id="victory-streak"></span></p>
+            </div>
+            <button id="play-again-btn" class="steam-button">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
