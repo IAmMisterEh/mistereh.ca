@@ -76,7 +76,9 @@ jobs:
         accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         projectName: clockwork-words-v3
         directory: ./steam-punk-games/clockwork-words-v3
+        # Enable caching for faster builds
         gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+        wranglerVersion: '3.x'
 
     - name: 🌐 Deployment Success Check
       if: success()
