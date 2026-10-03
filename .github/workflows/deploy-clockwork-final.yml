@@ -61,7 +61,7 @@ jobs:
         echo "🔐 Authenticating with Cloudflare..."
         wrangler whoami || echo "⚠️  Note: whoami failed, but continuing..."
 
-    - name: 🏗️ Deploy Clockwork Words v3.0 to Cloudflare Pages
+    - name: 🏗️ Deploy Clockwork Words v3.0 to Cloudflare Pages (with retry)
       run: |
         export CLOUDFLARE_ACCOUNT_ID="${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
         export CLOUDFLARE_API_TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}"
@@ -69,12 +69,34 @@ jobs:
         echo "🚀 Deploying Clockwork Words v3.0..."
         cd steam-punk-games/clockwork-words-v3
         
-        wrangler pages deploy . \
-          --project-name=clockwork-words-v3 \
-          --commit-hash="${{ github.sha }}" \
-          --commit-message="Clockwork Words v3.0 - Spiral Escape deployment"
+        # Wait for Cloudflare API to propagate project creation
+        sleep 20
         
-        echo "✅ Deployment complete!"
+        # Attempt deployment with retry logic
+        max_attempts=3
+        attempt=1
+        while [ $attempt -le $max_attempts ]; do
+          echo "⏳ Deployment attempt $attempt of $max_attempts..."
+          
+          if wrangler pages deploy . \
+            --project-name=clockwork-words-v3 \
+            --commit-hash="${{ github.sha }}" \
+            --commit-message="Clockwork Words v3.0 - Spiral Escape deployment"; then
+            echo "✅ Deployment successful!"
+            break
+          fi
+          
+          echo "⚠️  Attempt $attempt failed, retrying in 10 seconds..."
+          attempt=$((attempt + 1))
+          if [ $attempt -le $max_attempts ]; then
+            sleep 10
+          fi
+        done
+        
+        if [ $attempt -gt $max_attempts ]; then
+          echo "❌ All deployment attempts failed!"
+          exit 1
+        fi
 
     - name: ✅ Deployment Success Check
       if: success()
