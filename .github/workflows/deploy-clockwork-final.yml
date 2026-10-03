@@ -40,9 +40,9 @@ jobs:
         fi
         
         TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}"
-        # Accept both Global API Keys (cfk_*) and scoped API Tokens (cfat_*)
-        if [[ ! "$TOKEN" =~ ^(cfk_|cfat_) ]]; then
-          echo "❌ ERROR: CLOUDFLARE_API_TOKEN must start with cfk_* or cfat_*"
+        # Accept Global API Keys (cfk_*), scoped tokens (cfat_*), and Universal Tokens (cfut_*)
+        if [[ ! "$TOKEN" =~ ^(cfk_|cfat_|cfut_) ]]; then
+          echo "❌ ERROR: CLOUDFLARE_API_TOKEN must start with cfk_*, cfat_*, or cfut_*"
           echo "   Current value starts with: ${TOKEN:0:4}..."
           exit 1
         fi
