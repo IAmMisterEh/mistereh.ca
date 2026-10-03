@@ -46,10 +46,11 @@ jobs:
         PROJECT_NAME="${{ github.event.inputs.project-name || 'clockwork-words-v3' }}"
         
         echo "🚀 Creating Cloudflare Pages project: $PROJECT_NAME"
-        wrangler pages project create "$PROJECT_NAME" --account-id="$CLOUDFLARE_ACCOUNT_ID" \
+        # Account ID is set via environment variable, wrangler reads it automatically
+        wrangler pages project create "$PROJECT_NAME" \
           || {
-            echo "⚠️  Project may already exist or creation failed. Error logged."
-            # Continue anyway as the project might exist
+            echo "⚠️  Project may already exist or creation failed."
+            echo "   Continuing with deployment setup anyway..."
           }
         
         echo "✅ Project setup attempted!"
@@ -63,5 +64,5 @@ jobs:
         echo "=========================================="
         echo ""
         echo "You can now deploy to:"
-        echo "   https://$PROJECT_NAME.pages.dev/"
+        echo "   https://${{ github.event.inputs.project-name || 'clockwork-words-v3' }}.pages.dev/"
         echo ""
