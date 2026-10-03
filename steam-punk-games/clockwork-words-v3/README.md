@@ -51,3 +51,4 @@ Visit: [mistereh.ca/steam-punk-games/clockwork-words-v3](https://mistereh.ca/ste
 
 - **v3.0**: Spiral escape mechanic, 7-level progression, streak system
 - Previous versions focused on linear spiral patterns and basic typing
+
