@@ -521,3 +521,4 @@ class SpiralEscapeGame {
 document.addEventListener('DOMContentLoaded', () => {
     window.game = new SpiralEscapeGame();
 });
+
