@@ -73,8 +73,7 @@ jobs:
         wrangler pages deploy . \
           --project-name=clockwork-words-v3 \
           --commit-hash="${{ github.sha }}" \
-          --commit-message="Deploy via GitHub Actions" \
-          --message="Clockwork Words v3.0 - Spiral Escape deployment"
+          --commit-message="Clockwork Words v3.0 - Spiral Escape deployment"
         
         echo "✅ Deployment complete!"
 
