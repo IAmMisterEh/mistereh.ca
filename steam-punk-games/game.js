@@ -1,751 +1,845 @@
 /**
- * Clockwork Words - Timed Spiral Drill (FIXED VERSION)
- * Critical fixes:
- * - First letter visibility (larger, offset from center)
- * - Movement based on radius/distance, not center
- * - Letter "shooting" effect on correct typing
- * - Lowercase letters for early levels
- * - Boss moves with each spawn
+ * CLOCKWORK WORDS v3.0 - SPIRAL ESCAPE
+ * A steampunk typing game where you type letters to push enemies back
+ * Core Mechanics: Spiral path, active bubbles, keyboard-first input
  */
 
-class ClockworkWordsTimedSpiralFixed {
+class ClockworkWords {
     constructor() {
-        // Game state
-        this.state = {
-            isPlaying: false,
-            isPaused: false,
-            level: 1,
-            score: 0,
-            timeRemaining: 45,
-            currentSequence: [],
-            gameLoopId: null,
-            lastTime: 0,
-            lettersTypedThisSession: 0,
-            totalScore: 0,
-            unlockedLevels: 1,
-            currentIndex: 0,
-            spiralLetters: [],
-            spinePoints: [],
-            enemyPositionIndex: 0,
-            lastRevealTime: 0,
-            revealRate: 1000,
-            isEnemyMoving: false,
-            // FIX: Track enemy position for smooth movement
-            enemyCurrentX: 150,
-            enemyCurrentY: 150,
-            // FIX: Boss spawn counter
-            spawnsInSequence: 0
-        };
-
-        this.homeRowLetters = 'asdfghjkl;';
+        this.canvas = document.getElementById('game-canvas');
+        this.ctx = this.canvas.getContext('2d');
         
-        // FIX: Letter pools by level - lowercase for early levels!
-        const homeRow = this.homeRowLetters;
-        this.availableLetters = {
-            1: homeRow,                                   // Level 1: home row lowercase only
-            2: 'qwertyuiop' + homeRow,                   // Level 2: + top row lowercase
-            3: ('qwertyuiop' + homeRow) + 'zxcvbnm',    // Level 3: + bottom row lowercase
-            4: ('qwertyuiop' + homeRow + 'zxcvbnm') + ' ,.' // Level 4: full keyboard (still lowercase)
-        };
-
-        this.sequenceLengths = {
-            1: 30,
-            2: 35,
-            3: 40,
-            4: 45
-        };
-
-        this.unlockThresholds = {
-            1: { threshold: 0, name: "Home Row", alwaysAvailable: true },
-            2: { threshold: 100, name: "Top Row Explorer" },
-            3: { threshold: 250, name: "Bottom Row Master" },
-            4: { threshold: 500, name: "Keyboard Commander" }
-        };
-
-        this.elements = {
-            clockFace: document.getElementById('clock-face'),
-            clockHand: document.getElementById('clock-hand'),
-            letterTrail: document.getElementById('letter-trail'),
-            wordDisplay: document.getElementById('word-display'),
-            playerInput: document.getElementById('player-input'),
-            feedback: document.getElementById('feedback'),
-            levelDisplay: document.getElementById('level-display'),
-            scoreDisplay: document.getElementById('score-display'),
-            timeDisplay: document.getElementById('time-display'),
-            startBtn: document.getElementById('start-btn'),
-            pauseBtn: document.getElementById('pause-btn'),
-            restartBtn: document.getElementById('restart-btn'),
-            overlay: document.getElementById('overlay'),
-            overlayTitle: document.getElementById('overlay-title'),
-            overlayMessage: document.getElementById('overlay-message'),
-            closeOverlay: document.getElementById('close-overlay'),
-            enemy: null,
-            escapeBar: null
-        };
-
-        this.initEventListeners();
-        this.loadProgress();
+        // Game State
+        this.gameState = 'menu'; // menu, playing, gameOver
+        this.level = 1;
+        this.score = 0;
+        this.streak = 0;
+        this.maxStreak = 0;
+        this.bubbles = [];
+        this.enemies = [];
+        this.particles = [];
+        this.lettersPool = '';
+        
+        // Spiral Configuration
+        this.sprialCenter = { x: 0, y: 0 };
+        this.spiralRadiusStart = 50;
+        this.spiralRadiusEnd = 350;
+        this.spiralRotations = 2.5;
+        this.totalSpiralLength = 0;
+        this.nodes = [];
+        
+        // Timing & Progression
+        this.spawnTimer = 0;
+        this.spawnInterval = 2000; // ms between spawns (decreases with level)
+        this.enemyProgress = 0; // 0 = center, 1 = edge
+        this.winCondition = 500; // Score to win
+        
+        // Performance
+        this.lastFrameTime = 0;
+        this.frameCount = 0;
+        this.fpsDisplayTimer = 0;
+        
+        // Audio Context for procedural sounds
+        this.audioContext = null;
+        
+        this.init();
     }
-
-    initEventListeners() {
-        this.elements.startBtn.addEventListener('click', () => this.startGame());
-        this.elements.pauseBtn.addEventListener('click', () => this.togglePause());
-        this.elements.restartBtn.addEventListener('click', () => this.resetGame());
-        this.elements.closeOverlay.addEventListener('click', () => this.hideOverlay());
-        this.elements.playerInput.addEventListener('input', (e) => this.handleTyping(e));
+    
+    init() {
+        this.setupCanvas();
+        this.generateSpiralPath();
+        this.addEventListeners();
+        this.updateFPSDisplay();
         
-        document.addEventListener('click', () => {
-            if (this.state.isPlaying && !this.state.isPaused) {
-                this.elements.playerInput.focus();
+        // Main game loop
+        requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
+    }
+    
+    setupCanvas() {
+        const container = document.getElementById('game-container');
+        const rect = container.getBoundingClientRect();
+        this.canvas.width = rect.width;
+        this.canvas.height = rect.height;
+        this.sprialCenter.x = this.canvas.width / 2;
+        this.sprialCenter.y = this.canvas.height / 2;
+    }
+    
+    /**
+     * Generate Archimedean spiral path using r = a + bθ
+     */
+    generateSpiralPath() {
+        const numNodes = 60; // Number of letter positions along spiral
+        
+        for (let i = 0; i < numNodes; i++) {
+            const theta = (i / numNodes) * this.spiralRotations * Math.PI * 2;
+            
+            // Archimedean spiral: r = a + bθ
+            const a = this.spiralRadiusStart;
+            const b = (this.spiralRadiusEnd - this.spiralRadiusStart) / (this.spiralRotations * Math.PI * 2);
+            const r = a + b * theta;
+            
+            const x = this.sprialCenter.x + r * Math.cos(theta);
+            const y = this.sprialCenter.y + r * Math.sin(theta);
+            
+            // Calculate tangent for letter orientation
+            const dx = Math.cos(theta);
+            const dy = Math.sin(theta);
+            const angle = Math.atan2(dy, dx) + Math.PI / 2;
+            
+            this.nodes.push({ x, y, radius: r, theta, distance: i });
+        }
+        
+        this.totalSpiralLength = numNodes;
+    }
+    
+    addEventListeners() {
+        // Keyboard input - no focus required!
+        document.addEventListener('keydown', (e) => this.handleKeyPress(e));
+        
+        // Window resize
+        window.addEventListener('resize', () => this.setupCanvas());
+        
+        // UI Buttons
+        document.getElementById('start-btn').addEventListener('click', () => this.startGame());
+        document.getElementById('how-to-play-btn').addEventListener('click', () => 
+            this.showModal('how-to-play-modal')
+        );
+        document.getElementById('close-how-to-btn').addEventListener('click', () => 
+            this.hideModal('how-to-play-modal')
+        );
+        document.getElementById('play-again-btn').addEventListener('click', () => this.startGame());
+        document.getElementById('menu-btn').addEventListener('click', () => this.showMainMenu());
+        
+        // Start screen visibility
+        new MutationObserver(() => {
+            if (document.hidden) {
+                this.pause();
+            } else {
+                this.resume();
+            }
+        }).observe(document, { attributes: true, attributeFilter: ['hidden'] });
+    }
+    
+    /**
+     * Get keyboard level for current stage
+     */
+    getKeyboardLevel() {
+        const levels = [
+            'asdfjkl;',           // Level 1: Home row core
+            'asdfjkl;gh',         // Level 2: Add g, h
+            'erthyuiopqw',        // Level 3-4: Top row (expanded)
+            'qwertiopasdfjk',     // Level 5: More top row
+            'cvbnm,z./',          // Level 6: Bottom row
+            '1234567890!@#$%^&*'  // Level 7+: Numbers & symbols
+        ];
+        
+        const index = Math.min(this.level - 1, levels.length - 1);
+        return levels[index];
+    }
+    
+    /**
+     * Start new game
+     */
+    startGame() {
+        this.hideAllModals();
+        this.gameState = 'playing';
+        this.score = 0;
+        this.level = 1;
+        this.streak = 0;
+        this.spawnInterval = 2000;
+        this.winCondition = 500;
+        
+        this.resetGame();
+        this.updateHUD();
+        document.getElementById('game-screen').classList.remove('hidden');
+        document.getElementById('main-menu').classList.add('hidden');
+    }
+    
+    /**
+     * Reset game state for new round
+     */
+    resetGame() {
+        this.bubbles = [];
+        this.enemies = [];
+        this.particles = [];
+        this.enemyProgress = 0;
+        this.spawnTimer = 0;
+        this.generateLevel();
+    }
+    
+    /**
+     * Generate letter pool based on level
+     */
+    generateLevel() {
+        this.lettersPool = this.getKeyboardLevel();
+    }
+    
+    /**
+     * Spawn new enemy at center of spiral
+     */
+    spawnEnemy() {
+        const nodeIndex = Math.floor(Math.random() * (this.nodes.length - 5)) + 2;
+        const letter = this.lettersPool[Math.floor(Math.random() * this.lettersPool.length)];
+        
+        // Add some variety to letters
+        const useCaps = Math.random() > 0.7;
+        
+        const bubble = {
+            id: Date.now() + Math.random(),
+            nodeIndex: nodeIndex,
+            letter: letter,
+            x: this.nodes[nodeIndex].x,
+            y: this.nodes[nodeIndex].y,
+            radius: this.nodes[nodeIndex].radius,
+            theta: this.nodes[nodeIndex].theta,
+            scale: 0, // Animation from 0 to 1
+            targetScale: 1,
+            opacity: 1,
+            color: this.getBubbleColor(letter)
+        };
+        
+        this.bubbles.push(bubble);
+        
+        const enemy = {
+            id: bubble.id,
+            letter: letter,
+            distanceAlongPath: nodeIndex, // Same position as bubble
+            progress: nodeIndex / (this.nodes.length - 1), // 0-1 scale
+            scale: 0,
+            targetScale: 1
+        };
+        
+        this.enemies.push(enemy);
+        
+        // Decrease spawn interval as level increases
+        const minInterval = 500;
+        this.spawnInterval = Math.max(minInterval, 2000 - (this.level * 200));
+    }
+    
+    /**
+     * Get bubble color based on letter (accessibility-friendly)
+     */
+    getBubbleColor(letter) {
+        const colors = [
+            'rgba(255, 215, 0, 0.9)',   // Gold
+            'rgba(220, 20, 60, 0.85)',  // Crimson
+            'rgba(30, 144, 255, 0.85)', // DodgerBlue
+            'rgba(50, 205, 50, 0.85)',  // LimeGreen
+            'rgba(147, 112, 219, 0.85)' // MediumPurple
+        ];
+        
+        const index = letter.charCodeAt(0) % colors.length;
+        return colors[index];
+    }
+    
+    /**
+     * Main game loop with delta time
+     */
+    gameLoop(timestamp) {
+        const deltaTime = timestamp - this.lastFrameTime;
+        this.lastFrameTime = timestamp;
+        
+        if (this.gameState === 'playing') {
+            this.update(deltaTime);
+        }
+        
+        this.render();
+        this.updateFPSDisplay(deltaTime);
+        
+        requestAnimationFrame((t) => this.gameLoop(t));
+    }
+    
+    /**
+     * Update game state
+     */
+    update(deltaTime) {
+        // Spawn bubbles
+        this.spawnTimer += deltaTime;
+        if (this.spawnTimer >= this.spawnInterval && this.enemies.length < 30) {
+            this.spawnEnemy();
+            this.spawnTimer = 0;
+        }
+        
+        // Update enemies (push out along spiral)
+        this.enemies.forEach(enemy => {
+            enemy.distanceAlongPath += 0.5 + (this.level * 0.1); // Speed increases with level
+            enemy.progress = Math.min(1, enemy.distanceAlongPath / (this.nodes.length - 1));
+            
+            if (enemy.scale < enemy.targetScale) {
+                enemy.scale += 0.1;
             }
         });
-    }
-
-    loadProgress() {
-        try {
-            const savedUnlocked = localStorage.getItem('clockworkWords_unlocked');
-            const savedTotalScore = localStorage.getItem('clockworkWords_totalScore');
-            if (savedUnlocked) this.state.unlockedLevels = parseInt(savedUnlocked);
-            if (savedTotalScore) this.state.totalScore = parseInt(savedTotalScore);
-        } catch (e) { console.log('Could not load progress', e); }
-    }
-
-    saveProgress() {
-        try {
-            localStorage.setItem('clockworkWords_unlocked', this.state.unlockedLevels);
-            localStorage.setItem('clockworkWords_totalScore', this.state.totalScore);
-        } catch (e) { console.log('Could not save progress', e); }
-    }
-
-    startGame() {
-        if (!this.state.isPlaying) this.startSession();
-        else if (this.state.isPaused) this.resumeGame();
-    }
-
-    startSession() {
-        this.state.isPlaying = true;
-        this.state.isPaused = false;
-        this.state.timeRemaining = 45 + (this.state.level - 1) * 5;
-        this.state.lettersTypedThisSession = 0;
-        this.state.lastRevealTime = performance.now();
-        this.state.spawnCounter = 0;
         
-        this.state.revealRate = 1000 - ((this.state.level - 1) * 200);
-        
-        this.updateUI();
-        this.hideOverlay();
-        
-        this.elements.startBtn.textContent = 'Pause Session';
-        this.elements.pauseBtn.disabled = false;
-        
-        // Initialize escape bar
-        if (!this.elements.escapeBar) {
-            this.elements.escapeBar = document.createElement('div');
-            this.elements.escapeBar.id = 'escape-progress';
-            this.elements.escapeBar.style.position = 'absolute';
-            this.elements.escapeBar.style.bottom = '20px';
-            this.elements.escapeBar.style.left = '50%';
-            this.elements.escapeBar.style.transform = 'translateX(-50%)';
-            this.elements.escapeBar.style.width = '200px';
-            this.elements.escapeBar.style.height = '8px';
-            this.elements.escapeBar.style.background = 'rgba(61, 40, 23, 0.8)';
-            this.elements.escapeBar.style.borderRadius = '4px';
-            this.elements.escapeBar.style.border = '1px solid var(--steam-brass-gold)';
-            this.elements.escapeBar.style.overflow = 'hidden';
-            this.elements.escapeBar.style.zIndex = '5';
+        // Update bubbles (follow enemies visually)
+        this.bubbles.forEach((bubble, index) => {
+            if (index < this.enemies.length) {
+                const enemy = this.enemies[index];
+                const targetNodeIndex = Math.floor(enemy.distanceAlongPath);
+                
+                if (targetNodeIndex >= 0 && targetNodeIndex < this.nodes.length) {
+                    const node = this.nodes[targetNodeIndex];
+                    
+                    // Smooth movement toward target position
+                    bubble.x += (node.x - bubble.x) * 0.1;
+                    bubble.y += (node.y - bubble.y) * 0.1;
+                    bubble.radius = node.radius;
+                    bubble.theta = node.theta;
+                }
+            }
             
-            const fill = document.createElement('div');
-            fill.id = 'escape-fill';
-            fill.style.width = '0%';
-            fill.style.height = '100%';
-            fill.style.background = 'linear-gradient(90deg, #ff4444, #ffaa00)';
-            fill.style.transition = 'width 0.3s ease';
+            // Update animation
+            if (bubble.scale < bubble.targetScale) {
+                bubble.scale += 0.2;
+            }
+        });
+        
+        // Update particles
+        this.updateParticles(deltaTime);
+        
+        // Check win/loss conditions
+        this.checkGameState();
+        
+        // Level progression based on score
+        this.level = Math.floor(this.score / 50) + 1;
+    }
+    
+    /**
+     * Update particle system
+     */
+    updateParticles(deltaTime) {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const particle = this.particles[i];
             
-            this.elements.escapeBar.appendChild(fill);
-            this.elements.clockFace.appendChild(this.elements.escapeBar);
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+            particle.vy += 0.2; // Gravity
+            particle.life -= deltaTime * 0.001;
+            particle.opacity = Math.max(0, particle.life);
+            
+            if (particle.life <= 0 || particle.opacity <= 0) {
+                this.particles.splice(i, 1);
+            }
         }
-        
-        this.startSpiralDrill();
     }
-
-    resumeGame() {
-        this.state.isPaused = false;
-        this.elements.pauseBtn.textContent = 'Resume';
-        this.state.lastTime = performance.now();
-        this.state.gameLoopId = requestAnimationFrame((time) => this.gameLoop(time));
+    
+    /**
+     * Create explosion particles at position
+     */
+    createExplosion(x, y, color, count = 20) {
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 3 + Math.random() * 5;
+            
+            this.particles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 2, // Upward bias
+                radius: 3 + Math.random() * 5,
+                color: color,
+                life: 0.8,
+                opacity: 1
+            });
+        }
     }
-
-    togglePause() {
-        if (!this.state.isPlaying) return;
-
-        this.state.isPaused = !this.state.isPaused;
+    
+    /**
+     * Handle keyboard input
+     */
+    handleKeyPress(e) {
+        if (this.gameState !== 'playing') return;
         
-        if (this.state.isPaused) {
-            cancelAnimationFrame(this.state.gameLoopId);
-            this.elements.pauseBtn.textContent = 'Resume';
-            this.showOverlay('PAUSED', 'Drill paused!');
+        const key = e.key.toLowerCase();
+        const pressedChar = key.length === 1 ? key : null;
+        
+        if (!pressedChar) return;
+        
+        // Find closest bubble with matching letter to an enemy
+        let targetIndex = -1;
+        let minDistance = Infinity;
+        
+        this.enemies.forEach((enemy, index) => {
+            // Find any bubble with matching letter
+            for (let i = 0; i < this.bubbles.length; i++) {
+                if (this.bubbles[i].letter.toLowerCase() === pressedChar && 
+                    this.bubbles[i].opacity > 0.3) {
+                    
+                    // Calculate distance to enemy
+                    const dx = this.bubbles[i].x - enemy.x;
+                    const dy = this.bubbles[i].y - enemy.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        targetIndex = i;
+                    }
+                }
+            }
+        });
+        
+        if (targetIndex !== -1) {
+            this.handleHit(targetIndex);
         } else {
-            this.resumeGame();
+            this.handleMiss();
         }
     }
-
-    gameLoop(currentTime) {
-        if (!this.state.isPaused && this.state.isPlaying) {
-            let deltaTime = (currentTime - this.state.lastTime) / 1000;
+    
+    /**
+     * Player hits correct letter
+     */
+    handleHit(bubbleIndex) {
+        const bubble = this.bubbles[bubbleIndex];
+        const enemyIndex = Math.min(bubbleIndex, this.enemies.length - 1);
+        const enemy = this.enemies[enemyIndex];
+        
+        // Remove bubble
+        this.bubbles.splice(bubbleIndex, 1);
+        
+        // Remove corresponding enemy (push back)
+        if (this.enemies[enemyIndex]) {
+            this.enemies.splice(enemyIndex, 1);
+        }
+        
+        // Spawn explosion effect
+        this.createExplosion(
+            this.nodes[Math.floor(enemy.distanceAlongPath)].x,
+            this.nodes[Math.floor(enemy.distanceAlongPath)].y,
+            bubble.color,
+            25
+        );
+        
+        // Score calculation with streak multiplier
+        const basePoints = 10 + Math.floor(this.enemies.length * 2);
+        const streakBonus = this.streak >= 3 ? (this.streak * 2) : 0;
+        const points = basePoints + streakBonus;
+        
+        this.score += points;
+        this.streak++;
+        this.maxStreak = Math.max(this.maxStreak, this.streak);
+        
+        // Play sound effect
+        this.playSound('hit', points);
+    }
+    
+    /**
+     * Player presses wrong letter
+     */
+    handleMiss() {
+        this.streak = 0;
+        this.score = Math.max(0, this.score - 5);
+        
+        // Shake animation for feedback
+        document.getElementById('hud').classList.add('miss-feedback');
+        setTimeout(() => 
+            document.getElementById('hud').classList.remove('miss-feedback'), 
+            300
+        );
+        
+        // Play penalty sound
+        this.playSound('miss');
+    }
+    
+    /**
+     * Check game state conditions
+     */
+    checkGameState() {
+        // Lose condition: enemy reaches edge
+        if (this.enemies.length > 0) {
+            const maxProgress = Math.max(...this.enemies.map(e => e.progress));
             
-            // FIX: Cap deltaTime to prevent huge jumps on first frame or after pauses
-            if (deltaTime > 1.0) deltaTime = 1.0;
-            
-            this.state.lastTime = currentTime;
-            
-            this.state.timeRemaining -= deltaTime;
-            
-            const maxTime = 45 + (this.state.level - 1) * 5;
-            const progress = this.state.timeRemaining / maxTime;
-            const rotation = progress * 270 - 135;
-            
-            this.elements.clockHand.style.transform = 
-                `translateX(-50%) rotate(${rotation}deg)`;
-            
-            this.updateEscapeBar();
-            this.updateUI();
-
-            if (this.state.timeRemaining <= 0) {
-                this.endSession(false);
+            if (maxProgress >= 0.95) {
+                this.gameOver(false);
                 return;
             }
-
-            this.state.gameLoopId = requestAnimationFrame((time) => this.gameLoop(time));
+        }
+        
+        // Win condition: clear all enemies or reach score threshold
+        if (this.enemies.length === 0 && this.score >= this.winCondition) {
+            this.gameOver(true);
+            return;
+        }
+        
+        // Level progression
+        const newWinCondition = Math.floor(this.score / 50) * 50 + 500;
+        if (this.score >= newWinCondition && this.enemies.length === 0) {
+            this.levelUp();
+        }
+        
+        this.updateHUD();
+    }
+    
+    /**
+     * Level up progression
+     */
+    levelUp() {
+        this.level++;
+        
+        // Increase difficulty: faster spawn, more bubbles allowed
+        this.spawnInterval = Math.max(500, 2000 - (this.level * 200));
+        this.winCondition = Math.floor(this.score / 50) * 50 + 500;
+        
+        // Reset progress to give breathing room
+        this.enemyProgress = 0;
+        
+        // Level up sound effect
+        this.playSound('levelup');
+    }
+    
+    /**
+     * Game over handler
+     */
+    gameOver(won) {
+        this.gameState = 'gameOver';
+        
+        const title = document.getElementById('game-over-title');
+        const message = document.getElementById('game-over-message');
+        const finalScore = document.getElementById('final-score');
+        
+        if (won) {
+            title.textContent = 'VICTORY!';
+            message.textContent = `You escaped the spiral with ${this.score} points!`;
+            this.playSound('win');
+        } else {
+            title.textContent = 'GAME OVER';
+            message.textContent = 'The enemy reached the edge of the spiral!';
+            this.playSound('lose');
+        }
+        
+        finalScore.textContent = `${this.score} (Max Streak: ${this.maxStreak})`;
+        this.showModal('game-over-modal');
+    }
+    
+    /**
+     * Show/hide modals
+     */
+    showModal(modalId) {
+        document.getElementById(modalId).classList.remove('hidden');
+    }
+    
+    hideAllModals() {
+        document.querySelectorAll('.modal').forEach(el => el.classList.add('hidden'));
+    }
+    
+    showMainMenu() {
+        this.hideAllModals();
+        this.gameState = 'menu';
+        document.getElementById('main-menu').classList.remove('hidden');
+        document.getElementById('game-screen').classList.add('hidden');
+    }
+    
+    pause() {
+        if (this.gameState === 'playing') {
+            this.gamePaused = true;
         }
     }
-
-    updateEscapeBar() {
-        if (!this.elements.escapeBar || !this.state.spiralLetters.length) return;
+    
+    resume() {
+        if (this.gameState === 'playing' && this.gamePaused) {
+            this.gamePaused = false;
+        }
+    }
+    
+    /**
+     * Render all game elements
+     */
+    render() {
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        const maxIndex = Math.min(this.state.currentIndex, this.state.currentSequence.length - 1);
-        const progressPercent = (maxIndex / this.state.currentSequence.length) * 100;
+        // Draw spiral track background
+        this.drawSpiralTrack();
         
-        const fill = document.getElementById('escape-fill');
-        if (fill) {
-            fill.style.width = `${progressPercent}%`;
+        // Draw letters/bubbles first (behind enemies)
+        this.renderBubbles();
+        
+        // Draw particles
+        this.renderParticles();
+        
+        // Draw enemies last (foreground)
+        this.renderEnemies();
+    }
+    
+    /**
+     * Draw the spiral track
+     */
+    drawSpiralTrack() {
+        this.ctx.beginPath();
+        this.ctx.strokeStyle = 'rgba(184, 148, 28, 0.3)';
+        this.ctx.lineWidth = 8;
+        
+        const numPoints = 200;
+        let started = false;
+        
+        for (let i = 0; i <= numPoints; i++) {
+            const theta = (i / numPoints) * this.spiralRotations * Math.PI * 2;
+            const a = this.spiralRadiusStart;
+            const b = (this.spiralRadiusEnd - this.spiralRadiusStart) / (this.spiralRotations * Math.PI * 2);
+            const r = a + b * theta;
             
-            if (progressPercent < 50) {
-                fill.style.background = 'linear-gradient(90deg, #4a90e2, #ffd700)';
-            } else if (progressPercent < 80) {
-                fill.style.background = 'linear-gradient(90deg, #ffaa00, #ff4444)';
+            const x = this.sprialCenter.x + r * Math.cos(theta);
+            const y = this.sprialCenter.y + r * Math.sin(theta);
+            
+            if (!started) {
+                this.ctx.moveTo(x, y);
+                started = true;
             } else {
-                fill.style.background = 'linear-gradient(90deg, #ff4444, #ff0000)';
+                this.ctx.lineTo(x, y);
             }
         }
+        
+        this.ctx.stroke();
     }
-
-    startSpiralDrill() {
-        if (this.state.gameLoopId) {
-            cancelAnimationFrame(this.state.gameLoopId);
-            this.state.gameLoopId = null;
-        }
-        
-        // Clear existing spiral
-        const existingEnemy = document.getElementById('steam-enemy');
-        if (existingEnemy && existingEnemy.parentNode) {
-            existingEnemy.parentNode.removeChild(existingEnemy);
-        }
-        
-        const maxUnlocked = Math.min(this.state.unlockedLevels, 4);
-        const letterPool = this.availableLetters[maxUnlocked];
-        
-        const sequenceLength = this.sequenceLengths[this.state.level] || 30;
-        let sequence = '';
-        for (let i = 0; i < sequenceLength; i++) {
-            const randomLetter = letterPool[Math.floor(Math.random() * letterPool.length)];
-            sequence += randomLetter;
-        }
-        
-        this.state.currentSequence = sequence;
-        this.state.currentIndex = 0;
-        this.state.spiralLetters = [];
-        this.state.spinePoints = [];
-        this.state.enemyPositionIndex = 0;
-        this.state.lastRevealTime = performance.now();
-        this.state.isEnemyMoving = false;
-        this.state.spawnCounter = 0;
-        
-        this.state.enemyCurrentX = 150 + 15;
-        this.state.enemyCurrentY = 150;
-        
-        this.showSpiralLayout(sequence);
-
-        // Reveal the FIRST letter IMMEDIATELY
-        this.revealNextLetter(performance.now());
-        
-        // FIX: Start BOTH the reveal loop AND the timer loop!
-        this.state.lastTime = performance.now();
-        this.state.gameLoopId = requestAnimationFrame((time) => {
-            this.gameLoop(time);
-            this.revealLettersLoop(time);
+    
+    /**
+     * Render bubble letters
+     */
+    renderBubbles() {
+        this.bubbles.forEach(bubble => {
+            const alpha = bubble.opacity * (0.5 + 0.5 * bubble.scale);
+            
+            // Bubble glow
+            const gradient = this.ctx.createRadialGradient(
+                bubble.x, bubble.y, 2,
+                bubble.x, bubble.y, 15 * bubble.scale
+            );
+            
+            gradient.addColorStop(0, bubble.color);
+            gradient.addColorStop(0.7, bubble.color.replace(')', ', ' + alpha + ')'));
+            gradient.addColorStop(1, bubble.color.replace(')', `, ${alpha * 0.3})`));
+            
+            this.ctx.fillStyle = gradient;
+            this.ctx.beginPath();
+            this.ctx.arc(bubble.x, bubble.y, 15 * bubble.scale, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // Inner highlight (steampunk brass effect)
+            const innerGradient = this.ctx.createRadialGradient(
+                bubble.x - 3, bubble.y - 3, 0,
+                bubble.x, bubble.y, 8 * bubble.scale
+            );
+            
+            innerGradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+            innerGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.3)');
+            innerGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            
+            this.ctx.fillStyle = innerGradient;
+            this.ctx.beginPath();
+            this.ctx.arc(bubble.x, bubble.y, 8 * bubble.scale, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // Letter text
+            this.ctx.fillStyle = '#3d321e'; // Dark brown text for contrast
+            this.ctx.font = `bold ${14 * bubble.scale}px Georgia`;
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(bubble.letter, bubble.x, bubble.y);
         });
     }
-
-    showSpiralLayout(sequence) {
-        const letters = sequence.split('');
-        this.elements.letterTrail.innerHTML = '';
-        
-        const numLetters = letters.length;
-        const centerX = 150; // Center of clock face
-        const centerY = 150;
-        const radius = 110; // Fixed radius - letters in a circle
-        
-        for (let i = 0; i < numLetters; i++) {
-            // Arrange letters in a circle (360 degrees = 2*PI radians)
-            const angle = (i / numLetters) * (2 * Math.PI) - (Math.PI / 2);
+    
+    /**
+     * Render enemy sprites (brass cogs)
+     */
+    renderEnemies() {
+        this.enemies.forEach(enemy => {
+            const nodeIndex = Math.floor(enemy.distanceAlongPath);
+            if (nodeIndex < 0 || nodeIndex >= this.nodes.length) return;
             
-            const x = centerX + radius * Math.cos(angle);
-            const y = centerY + radius * Math.sin(angle);
-
-            const dot = document.createElement('div');
-            dot.className = 'letter-dot';
-            // Show letter immediately - visible from the start!
-            dot.textContent = letters[i].toUpperCase();
-            dot.style.left = `${x - 14}px`;
-            dot.style.top = `${y - 14}px`;
-            dot.style.opacity = '1';
-            dot.style.transform = 'scale(1)';
-            dot.style.width = '28px';
-            dot.style.height = '28px';
-            dot.style.fontSize = '14px';
+            const node = this.nodes[nodeIndex];
+            const scale = enemy.scale;
             
-            const isVowel = 'aeiouAEIOU'.includes(letters[i]);
-            dot.style.background = isVowel ? '#ffd700' : '#b89e6c';
-            dot.dataset.letter = letters[i];
-            dot.dataset.letterIndex = i;
-            dot.dataset.isTarget = 'false';
+            // Draw brass cog for enemy
+            const x = node.x;
+            const y = node.y;
             
-            this.elements.letterTrail.appendChild(dot);
-            this.state.spiralLetters.push(dot);
-            // Store circular position (same radius for all)
-            this.state.spinePoints.push({x, y, radius});
-        }
-        
-        // FIX: Create enemy element with proper positioning
-        if (!this.elements.enemy) {
-            this.elements.enemy = document.createElement('div');
-            this.elements.enemy.id = 'steam-enemy';
-            this.elements.enemy.style.position = 'absolute';
-            this.elements.enemy.style.width = '24px'; // Slightly larger
-            this.elements.enemy.style.height = '24px';
-            this.elements.enemy.style.background = '#ff4444';
-            this.elements.enemy.style.borderRadius = '50%';
-            this.elements.enemy.style.boxShadow = '0 0 10px #ff0000, 0 0 20px #ffaa00';
-            this.elements.enemy.style.zIndex = '10';
-            this.elements.enemy.innerHTML = '⚡';
-            this.elements.enemy.style.display = 'flex';
-            this.elements.enemy.style.alignItems = 'center';
-            this.elements.enemy.style.justifyContent = 'center';
-            this.elements.enemy.style.fontSize = '14px';
-        }
-        
-        // Set initial position
-        this.elements.enemy.style.left = `${this.state.enemyCurrentX - 12}px`;
-        this.elements.enemy.style.top = `${this.state.enemyCurrentY - 12}px`;
-        
-        if (!this.elements.escapeBar) {
-            this.elements.escapeBar = document.createElement('div');
-            this.elements.escapeBar.id = 'escape-progress';
-            this.elements.escapeBar.style.position = 'absolute';
-            this.elements.escapeBar.style.bottom = '20px';
-            this.elements.escapeBar.style.left = '50%';
-            this.elements.escapeBar.style.transform = 'translateX(-50%)';
-            this.elements.escapeBar.style.width = '200px';
-            this.elements.escapeBar.style.height = '8px';
-            this.elements.escapeBar.style.background = 'rgba(61, 40, 23, 0.8)';
-            this.elements.escapeBar.style.borderRadius = '4px';
-            this.elements.escapeBar.style.border = '1px solid var(--steam-brass-gold)';
-            this.elements.escapeBar.style.overflow = 'hidden';
-            this.elements.escapeBar.style.zIndex = '5';
+            // Cog body with teeth
+            const toothCount = 8;
+            const outerRadius = 12 * scale;
+            const innerRadius = 7 * scale;
             
-            const fill = document.createElement('div');
-            fill.id = 'escape-fill';
-            fill.style.width = '0%';
-            fill.style.height = '100%';
-            fill.style.background = 'linear-gradient(90deg, #ff4444, #ffaa00)';
-            fill.style.transition = 'width 0.3s ease';
+            this.ctx.save();
+            this.ctx.translate(x, y);
             
-            this.elements.escapeBar.appendChild(fill);
-        }
-        
-        this.elements.letterTrail.appendChild(this.elements.enemy);
-        this.elements.letterTrail.appendChild(this.elements.escapeBar);
-        
-        console.log('🔧 Fixed spiral initialized:', { 
-            sequenceLength: numLetters, 
-            enemyPos: {x: this.state.enemyCurrentX, y: this.state.enemyCurrentY},
-            firstLetterRadius: minRadius
+            // Shadow/glow
+            this.ctx.shadowColor = 'rgba(212, 175, 55, 0.5)';
+            this.ctx.shadowBlur = 10;
+            
+            for (let i = 0; i < toothCount; i++) {
+                const angle = (i / toothCount) * Math.PI * 2;
+                const nextAngle = ((i + 0.5) / toothCount) * Math.PI * 2;
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(
+                    outerRadius * Math.cos(angle),
+                    outerRadius * Math.sin(angle)
+                );
+                this.ctx.lineTo(
+                    outerRadius * Math.cos(nextAngle),
+                    outerRadius * Math.sin(nextAngle)
+                );
+            }
+            
+            this.ctx.closePath();
+            this.ctx.fillStyle = 'rgba(212, 175, 55, 0.9)';
+            this.ctx.fill();
+            
+            // Inner circle
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, innerRadius, 0, Math.PI * 2);
+            this.ctx.fillStyle = 'rgba(184, 148, 28, 1)';
+            this.ctx.fill();
+            
+            // Center hole
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, innerRadius * 0.4, 0, Math.PI * 2);
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            this.ctx.fill();
+            
+            // Letter on enemy
+            this.ctx.shadowBlur = 0;
+            this.ctx.fillStyle = '#3d321e';
+            this.ctx.font = `bold ${10 * scale}px Georgia`;
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(enemy.letter, 0, 0);
+            
+            this.ctx.restore();
         });
     }
-
-    revealLettersLoop(currentTime) {
-        if (!this.state.isPlaying || this.state.isPaused) {
-            this.state.gameLoopId = requestAnimationFrame((time) => this.revealLettersLoop(time));
-            return;
-        }
-
-        // Check if all letters have been revealed
-        if (this.state.currentIndex >= this.state.currentSequence.length) {
-            // All letters revealed - just wait for player to finish typing
-            // Check every second if all letters are typed
-            if (this.state.lettersTypedThisSession >= this.state.currentSequence.length) {
-                setTimeout(() => this.onSpiralComplete(), 500);
-            }
-            this.state.gameLoopId = requestAnimationFrame((time) => this.revealLettersLoop(time));
-            return;
-        }
-
-        const timeSinceLastReveal = currentTime - this.state.lastRevealTime;
-        
-        if (timeSinceLastReveal >= this.state.revealRate && !this.state.isEnemyMoving) {
-            this.revealNextLetter(currentTime);
-            this.state.gameLoopId = requestAnimationFrame((time) => this.revealLettersLoop(time));
-            return;
-        }
-
-        this.state.gameLoopId = requestAnimationFrame((time) => this.revealLettersLoop(time));
-    }
-
-    revealNextLetter(currentTime) {
-        if (this.state.currentIndex >= this.state.currentSequence.length) return;
-        
-        const letter = this.state.currentSequence[this.state.currentIndex];
-        const dot = this.state.spiralLetters[this.state.currentIndex];
-        
-        if (dot && this.elements.enemy) {
-            // Reveal this letter
-            dot.style.opacity = '1';
-            dot.style.transform = 'scale(1.2)';
-            dot.dataset.isTarget = 'true';
+    
+    /**
+     * Render particles
+     */
+    renderParticles() {
+        this.particles.forEach(particle => {
+            if (particle.opacity <= 0) return;
             
-            // FIX: Update UI to show the correct lowercase letter
-            this.elements.feedback.textContent = `TYPE: "${letter}"!`;
+            this.ctx.globalAlpha = particle.opacity;
+            this.ctx.fillStyle = particle.color;
             
-            // FIX: Move enemy to this position (using radius-based distance)
-            const targetPoint = this.state.spinePoints[this.state.currentIndex];
-            if (targetPoint) {
-                this.moveEnemyToPosition(targetPoint);
-            }
-            
-            this.elements.playerInput.focus();
-            
-            setTimeout(() => {
-                this.state.isEnemyMoving = false;
-            }, 300);
-        }
-
-        this.state.lastRevealTime = currentTime;
-        this.state.currentIndex++;
+            this.ctx.beginPath();
+            this.ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
+        
+        this.ctx.globalAlpha = 1;
     }
-
-    moveEnemyToPosition(targetPoint) {
-        if (!this.elements.enemy || !targetPoint) return;
+    
+    /**
+     * Update HUD display
+     */
+    updateHUD() {
+        document.getElementById('level-display').textContent = this.level;
+        document.getElementById('score-display').textContent = this.score;
+        document.getElementById('streak-display').textContent = this.streak + 'x';
+        document.getElementById('bubble-count').textContent = this.enemies.length;
         
-        const targetX = targetPoint.x;
-        const targetY = targetPoint.y;
-        
-        // FIX: Smooth lerp movement
-        const lerpFactor = 0.7;
-        this.state.enemyCurrentX = this.state.enemyCurrentX + (targetX - this.state.enemyCurrentX) * lerpFactor;
-        this.state.enemyCurrentY = this.state.enemyCurrentY + (targetY - this.state.enemyCurrentY) * lerpFactor;
-        
-        this.elements.enemy.style.left = `${this.state.enemyCurrentX - 12}px`;
-        this.elements.enemy.style.top = `${this.state.enemyCurrentY - 12}px`;
-        
-        this.state.isEnemyMoving = true;
-    }
-
-    handleTyping(event) {
-        if (this.state.isPaused || !this.state.isPlaying) return;
-
-        const typed = event.target.value.toLowerCase().trim();
-        
-        if (typed.length > 0) {
-            this.validateSpiralLetter(typed);
-        }
-    }
-
-    validateSpiralLetter(typedChar) {
-        // FIX: Get the ACTUAL target letter (the one that was just revealed)
-        // currentIndex points to the NEXT letter to be revealed, so target is at currentIndex - 1
-        const targetIndex = this.state.currentIndex - 1;
-        
-        if (targetIndex < 0 || targetIndex >= this.state.currentSequence.length) {
-            // No letter to type yet or all letters revealed
-            this.elements.playerInput.value = '';
-            return;
-        }
-        
-        const targetLetter = this.state.currentSequence[targetIndex];
-        
-        // Clear input
-        this.elements.playerInput.value = '';
-        
-        if (typedChar === targetLetter) {
-            // Correct! Trigger shooting effect
-            this.handleCorrectSpiralLetter(typedChar, targetIndex);
-            setTimeout(() => this.elements.playerInput.focus(), 50);
+        // Visual feedback for streak
+        const streakEl = document.getElementById('streak-display');
+        if (this.streak >= 5) {
+            streakEl.classList.add('streak-boost');
         } else {
-            this.elements.feedback.textContent = `❌ Try "${targetLetter}"!`;
-            this.state.timeRemaining = Math.max(5, this.state.timeRemaining - 1);
-            
-            this.elements.wordDisplay.style.borderColor = '#ff4444';
-            setTimeout(() => {
-                this.elements.wordDisplay.style.borderColor = 'var(--steam-brass-gold)';
-            }, 300);
+            streakEl.classList.remove('streak-boost');
+        }
+        
+        // Progress bar shows how far enemies are from escaping
+        const maxProgress = this.enemies.length > 0 
+            ? Math.max(...this.enemies.map(e => e.progress)) * 100 
+            : 0;
+        
+        const progressEl = document.getElementById('enemy-progress');
+        progressEl.style.width = `${maxProgress}%`;
+    }
+    
+    /**
+     * Update FPS display periodically
+     */
+    updateFPSDisplay(deltaTime) {
+        this.frameCount++;
+        if (deltaTime > 0 && Date.now() - this.fpsDisplayTimer > 1000) {
+            const fps = Math.round(this.frameCount * 1000 / deltaTime);
+            // FPS logging for performance monitoring
+            // console.log(`FPS: ${fps}`);
+            this.frameCount = 0;
+            this.fpsDisplayTimer = Date.now();
         }
     }
-
-    handleCorrectSpiralLetter(typedChar, completedIndex) {
-        // completedIndex is passed in (the letter that was just typed)
-        const currentIndex = completedIndex;
-        
-        // FIX: Create shooting effect!
-        this.createShootingEffect(typedChar, currentIndex);
-        
-        const baseScore = 5;
-        const timeBonus = Math.floor(this.state.timeRemaining) * 2;
-        
-        const isHomeRow = this.homeRowLetters.includes(
-            this.state.currentSequence[currentIndex].toLowerCase()
-        );
-        const bonusMultiplier = isHomeRow ? 1.5 : 1.0;
-        
-        const totalPoints = Math.floor((baseScore + timeBonus) * bonusMultiplier);
-        this.state.score += totalPoints;
-        this.state.totalScore += totalPoints;
-        
-        this.state.lettersTypedThisSession++;
-        this.elements.feedback.textContent = `+${totalPoints}! ${isHomeRow ? '🌟' : ''}`;
-        
-        // Dim completed letter
-        const dot = this.state.spiralLetters[currentIndex];
-        if (dot) {
-            dot.style.opacity = '0.4';
-            dot.style.transform = 'scale(0.8)';
-            dot.dataset.isTarget = 'false';
+    
+    /**
+     * Play procedural sound effects using Web Audio API
+     */
+    playSound(type, multiplier = 1) {
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
         
-        // FIX: Move enemy to next position when letter is typed correctly!
-        const nextIndex = currentIndex + 1;
-        if (nextIndex < this.state.currentSequence.length) {
-            const nextPoint = this.state.spinePoints[nextIndex];
-            if (nextPoint) {
-                this.moveEnemyToPosition(nextPoint);
-            }
-        }
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
         
-        // Check if all letters completed
-        if (this.state.lettersTypedThisSession >= this.state.currentSequence.length) {
-            setTimeout(() => this.onSpiralComplete(), 500);
-        } else {
-            setTimeout(() => this.elements.playerInput.focus(), 300);
-        }
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
         
-        this.saveProgress();
-        this.updateUI();
-    }
-
-    // FIX: Create shooting effect when letter is typed correctly
-    createShootingEffect(letter, targetIndex) {
-        // Find the target letter dot
-        const targetDot = this.state.spiralLetters[targetIndex];
-        if (!targetDot || !this.elements.enemy) return;
-        
-        const bullet = document.createElement('div');
-        bullet.style.position = 'absolute';
-        bullet.style.width = '8px';
-        bullet.style.height = '8px';
-        bullet.style.background = '#ffd700';
-        bullet.style.borderRadius = '50%';
-        bullet.style.boxShadow = '0 0 8px #ffd700';
-        bullet.style.zIndex = '15';
-        
-        // Start from enemy position
-        const startX = this.state.enemyCurrentX;
-        const startY = this.state.enemyCurrentY;
-        
-        bullet.style.left = `${startX - 4}px`;
-        bullet.style.top = `${startY - 4}px`;
-        
-        this.elements.letterTrail.appendChild(bullet);
-        
-        // Animate bullet moving to target
-        const targetPoint = this.state.spinePoints[targetIndex];
-        if (targetPoint) {
-            const deltaX = targetPoint.x - startX;
-            const deltaY = targetPoint.y - startY;
-            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-            const duration = Math.min(200, distance * 2); // Speed based on distance
-            
-            const startTime = performance.now();
-            
-            const animateBullet = (currentTime) => {
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(1, elapsed / duration);
+        switch (type) {
+            case 'hit':
+                oscillator.frequency.setValueAtTime(440 * multiplier, this.audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(880, this.audioContext.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.15);
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + 0.15);
+                break;
                 
-                const currentX = startX + deltaX * progress;
-                const currentY = startY + deltaY * progress;
+            case 'miss':
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(150, this.audioContext.currentTime);
+                oscillator.frequency.linearRampToValueAtTime(100, this.audioContext.currentTime + 0.2);
+                gainNode.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + 0.2);
+                break;
                 
-                bullet.style.left = `${currentX - 4}px`;
-                bullet.style.top = `${currentY - 4}px`;
+            case 'levelup':
+                oscillator.type = 'sine';
+                [523, 659, 784, 1047].forEach((freq, i) => {
+                    const time = this.audioContext.currentTime + i * 0.1;
+                    oscillator.frequency.setValueAtTime(freq, time);
+                    gainNode.gain.setValueAtTime(0.2, time);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, time + 0.3);
+                });
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + 1);
+                break;
                 
-                if (progress < 1) {
-                    requestAnimationFrame(animateBullet);
-                } else {
-                    // Bullet reached target - create hit effect
-                    this.createHitEffect(targetPoint.x, targetPoint.y);
-                    bullet.parentNode.removeChild(bullet);
-                }
-            };
-            
-            requestAnimationFrame(animateBullet);
+            case 'win':
+                oscillator.type = 'triangle';
+                [523, 659, 784, 1047, 1318].forEach((freq, i) => {
+                    const time = this.audioContext.currentTime + i * 0.1;
+                    oscillator.frequency.setValueAtTime(freq, time);
+                    gainNode.gain.setValueAtTime(0.25, time);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, time + 0.3);
+                });
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + 1.5);
+                break;
+                
+            case 'lose':
+                oscillator.type = 'sawtooth';
+                [392, 349, 329, 293].forEach((freq, i) => {
+                    const time = this.audioContext.currentTime + i * 0.15;
+                    oscillator.frequency.setValueAtTime(freq, time);
+                    gainNode.gain.setValueAtTime(0.2, time);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, time + 0.3);
+                });
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + 1.5);
+                break;
         }
-    }
-
-    createHitEffect(x, y) {
-        const hit = document.createElement('div');
-        hit.style.position = 'absolute';
-        hit.style.left = `${x - 15}px`;
-        hit.style.top = `${y - 15}px`;
-        hit.style.width = '30px';
-        hit.style.height = '30px';
-        hit.style.background = 'radial-gradient(circle, rgba(255, 215, 0, 0.8) 0%, rgba(255, 68, 68, 0) 70%)';
-        hit.style.borderRadius = '50%';
-        hit.style.zIndex = '14';
-        hit.style.animation = 'hitPulse 0.3s ease-out forwards';
-        
-        // Add keyframes dynamically
-        if (!document.getElementById('hit-effect-styles')) {
-            const style = document.createElement('style');
-            style.id = 'hit-effect-styles';
-            style.textContent = `
-                @keyframes hitPulse {
-                    0% { transform: scale(0.5); opacity: 1; }
-                    100% { transform: scale(2); opacity: 0; }
-                }
-            `;
-            document.head.appendChild(style);
-        }
-        
-        this.elements.letterTrail.appendChild(hit);
-        
-        setTimeout(() => {
-            if (hit.parentNode) {
-                hit.parentNode.removeChild(hit);
-            }
-        }, 300);
-    }
-
-    onSpiralComplete() {
-        const sequenceLength = this.state.currentSequence.length;
-        const baseScore = sequenceLength * 10;
-        const timeBonus = Math.floor(this.state.timeRemaining) * 3;
-        
-        const isPureHomeRow = this.state.currentSequence.split('').every(
-            letter => this.homeRowLetters.includes(letter.toLowerCase())
-        );
-        const bonusMultiplier = isPureHomeRow ? 1.5 : 1.0;
-        
-        const totalPoints = Math.floor((baseScore + timeBonus) * bonusMultiplier);
-        
-        this.state.score += totalPoints;
-        this.state.totalScore += totalPoints;
-        
-        this.elements.feedback.textContent = 
-            `🎉 SEQUENCE COMPLETE! +${totalPoints}! ${isPureHomeRow ? '🌟 PURE HOME ROW!' : ''}`;
-
-        this.state.lettersTypedThisSession += sequenceLength;
-        const sequencesCompleted = Math.floor(this.state.lettersTypedThisSession / sequenceLength);
-
-        if (sequencesCompleted >= 10 && this.state.level < 4) {
-            this.state.level++;
-            this.state.timeRemaining = 45 + (this.state.level - 1) * 5;
-            this.state.revealRate = Math.max(400, 1000 - ((this.state.level - 1) * 200));
-            
-            this.elements.feedback.textContent = `LEVEL UP! Now at Level ${this.state.level}`;
-        } else if (sequencesCompleted >= 10 && this.state.level >= 4) {
-            this.endSession(true);
-            return;
-        }
-
-        setTimeout(() => this.startSpiralDrill(), 800);
-
-        this.saveProgress();
-    }
-
-    endSession(win) {
-        this.state.isPlaying = false;
-        cancelAnimationFrame(this.state.gameLoopId);
-
-        if (win) {
-            this.showOverlay('🎉 SPIRAL COMPLETE! 🎉', `Total score: ${this.state.score} points.`);
-        } else {
-            this.showOverlay('GAME OVER', `Time's up! Total score: ${this.state.score} points.`);
-        }
-
-        this.elements.startBtn.textContent = 'Start Spiral';
-        this.elements.pauseBtn.disabled = true;
-    }
-
-    resetGame() {
-        this.state.isPlaying = false;
-        this.state.isPaused = false;
-        this.state.level = 1;
-        this.state.score = 0;
-        this.state.lettersTypedThisSession = 0;
-        this.state.timeRemaining = 45;
-        this.state.revealRate = 1000;
-        
-        this.hideOverlay();
-        this.elements.startBtn.textContent = 'Start Spiral';
-        this.elements.pauseBtn.disabled = true;
-        
-        const sampleWord = 'asdfghjkl;';
-        this.elements.wordDisplay.innerHTML = `<span style="color: var(--steam-brass-gold)">SAMPLE: ${sampleWord.toUpperCase()}</span>`;
-
-        this.updateUI();
-    }
-
-    updateUI() {
-        this.elements.levelDisplay.textContent = `Level ${this.state.level}`;
-        this.elements.scoreDisplay.textContent = this.state.score;
-        
-        const timeFormatted = Math.max(0, Math.ceil(this.state.timeRemaining));
-        // FIX: HTML already has 's' after the span, so just set the number
-        this.elements.timeDisplay.textContent = `${timeFormatted}`;
-
-        if (timeFormatted <= 5) {
-            this.elements.timeDisplay.style.color = '#ff4444';
-        } else {
-            this.elements.timeDisplay.style.color = '';
-        }
-
-        const maxTime = 45 + (this.state.level - 1) * 5;
-        document.getElementById('time-bar').style.width = `${Math.max(0, (this.state.timeRemaining / maxTime) * 100)}%`;
-    }
-
-    showOverlay(title, message) {
-        this.elements.overlayTitle.textContent = title;
-        this.elements.overlayMessage.textContent = message;
-        this.elements.closeOverlay.textContent = 'Start Spiral';
-        this.elements.closeOverlay.onclick = () => this.resetGame();
-        this.elements.overlay.classList.remove('hidden');
-    }
-
-    hideOverlay() {
-        this.elements.overlay.classList.add('hidden');
     }
 }
 
-// Initialize game when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    const game = new ClockworkWordsTimedSpiralFixed();
-    window.clockworkGame = game;
-    console.log('🔧 Clockwork Words FIXED version loaded!');
+// Initialize game when page loads
+window.addEventListener('load', () => {
+    const game = new ClockworkWords();
+    
+    // Make global for debugging
+    window.game = game;
 });

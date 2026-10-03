@@ -1,0 +1,13 @@
+name = "steam-punk-games"
+compatibility_date = "2026-10-03"
+compatibility_flags = ["nodejs_compat"]
+
+[placement]
+mode = "smart"
+
+routes = [
+  { pattern = "mistereh.ca/steam-punk-games/*", zone_name = "mistereh.ca" }
+]
+
+# Serve static files from root directory
+pages_build_output_dir = "."
