@@ -14,10 +14,7 @@ jobs:
   deploy:
     name: 🚀 Deploy Clockwork Words v3.0 Spiral Escape
     runs-on: ubuntu-latest
-    retry:
-      maxAttempts: 2
-      waitInterval: 60
-      
+    
     steps:
     - name: ⬇️ Checkout Repository
       uses: actions/checkout@v4
@@ -43,7 +40,6 @@ jobs:
         fi
         
         TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}"
-        # Accept Global API Keys (cfk_*), scoped tokens (cfat_*), and Universal Tokens (cfut_*)
         if [[ ! "$TOKEN" =~ ^(cfk_|cfat_|cfut_) ]]; then
           echo "❌ ERROR: CLOUDFLARE_API_TOKEN must start with cfk_*, cfat_*, or cfut_*"
           echo "   Current value starts with: ${TOKEN:0:4}..."
@@ -72,9 +68,6 @@ jobs:
         
         echo "🚀 Deploying Clockwork Words v3.0..."
         cd steam-punk-games/clockwork-words-v3
-        
-        # Wait a moment for Cloudflare to register the project if it was just created
-        sleep 15
         
         wrangler pages deploy . \
           --project-name=clockwork-words-v3 \
