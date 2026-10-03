@@ -61,7 +61,7 @@ jobs:
         echo "🔐 Authenticating with Cloudflare..."
         wrangler whoami || echo "⚠️  Note: whoami failed, but continuing..."
 
-    - name: 🏗️ Deploy Clockwork Words v3.0 to Cloudflare Pages (with retry)
+    - name: 🏗️ Deploy Clockwork Words v3.0 to Cloudflare Pages (with extended wait and retry)
       run: |
         export CLOUDFLARE_ACCOUNT_ID="${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
         export CLOUDFLARE_API_TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}"
@@ -69,8 +69,15 @@ jobs:
         echo "🚀 Deploying Clockwork Words v3.0..."
         cd steam-punk-games/clockwork-words-v3
         
-        # Wait for Cloudflare API to propagate project creation
-        sleep 20
+        # Extended wait for Cloudflare API to fully propagate project creation
+        echo "⏳ Waiting 60 seconds for Cloudflare API propagation..."
+        sleep 60
+        
+        # List existing projects to verify project exists
+        echo "📋 Verifying Cloudflare Pages project exists..."
+        wrangler pages project list --account-id="$CLOUDFLARE_ACCOUNT_ID" || {
+          echo "⚠️  Could not list projects, continuing with deployment anyway..."
+        }
         
         # Attempt deployment with retry logic
         max_attempts=3
@@ -83,20 +90,18 @@ jobs:
             --commit-hash="${{ github.sha }}" \
             --commit-message="Clockwork Words v3.0 - Spiral Escape deployment"; then
             echo "✅ Deployment successful!"
-            break
+            exit 0
           fi
           
-          echo "⚠️  Attempt $attempt failed, retrying in 10 seconds..."
+          echo "⚠️  Attempt $attempt failed, retrying in 15 seconds..."
           attempt=$((attempt + 1))
           if [ $attempt -le $max_attempts ]; then
-            sleep 10
+            sleep 15
           fi
         done
         
-        if [ $attempt -gt $max_attempts ]; then
-          echo "❌ All deployment attempts failed!"
-          exit 1
-        fi
+        echo "❌ All deployment attempts failed!"
+        exit 1
 
     - name: ✅ Deployment Success Check
       if: success()
