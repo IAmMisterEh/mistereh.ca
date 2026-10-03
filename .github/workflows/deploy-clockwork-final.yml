@@ -14,7 +14,10 @@ jobs:
   deploy:
     name: 🚀 Deploy Clockwork Words v3.0 Spiral Escape
     runs-on: ubuntu-latest
-    
+    retry:
+      maxAttempts: 2
+      waitInterval: 60
+      
     steps:
     - name: ⬇️ Checkout Repository
       uses: actions/checkout@v4
@@ -69,6 +72,9 @@ jobs:
         
         echo "🚀 Deploying Clockwork Words v3.0..."
         cd steam-punk-games/clockwork-words-v3
+        
+        # Wait a moment for Cloudflare to register the project if it was just created
+        sleep 15
         
         wrangler pages deploy . \
           --project-name=clockwork-words-v3 \
