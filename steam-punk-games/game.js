@@ -178,7 +178,10 @@ class ClockworkWords {
      * Spawn new enemy at center of spiral
      */
     spawnEnemy() {
-        const nodeIndex = Math.floor(Math.random() * (this.nodes.length - 5)) + 2;
+        // Spawn further inward to give player reaction time
+        // Max nodeIndex is now 40 (out of 59), giving ~0.68 max initial progress
+        const maxSpawnNode = Math.max(10, this.nodes.length - 20);
+        const nodeIndex = Math.floor(Math.random() * (maxSpawnNode - 2)) + 2;
         const letter = this.lettersPool[Math.floor(Math.random() * this.lettersPool.length)];
         
         // Add some variety to letters
