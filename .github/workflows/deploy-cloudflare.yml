@@ -82,5 +82,5 @@ jobs:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         directory: .
-        projectName: steam-punk-games
+        projectName: mistereh-ca
 
