@@ -39,13 +39,17 @@ jobs:
           echo "⚠️  Warning: API token doesn't start with 'cfk_'"
           echo "   You might be using an API Token (cfat_) instead of a Global API Key (cfk_)"
           echo "   Pages deployments require a Global API Key!"
-          echo ""
-          echo "   To fix: Generate a Global API Key at:"
-          echo "   https://dash.cloudflare.com/profile/api-tokens"
-          echo "   (Not the 'API Tokens' section - go to 'Global API Key')"
           exit 1
         else
-          echo "✅ API token looks correct (starts with 'cfk_')"
+          echo "✅ API token format looks correct (starts with 'cfk_')"
+        fi
+        
+        # Verify token length (should be 44: cfk_ + 40 hex chars)
+        token_length=$(echo -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" | wc -c)
+        if [ "$token_length" -ne 44 ]; then
+          echo "⚠️  Warning: Token length is $token_length chars (expected 44)"
+        else
+          echo "✅ Token length is correct (44 chars)"
         fi
         
         # Test the credentials against Cloudflare API
@@ -60,7 +64,7 @@ jobs:
           echo "   Account ID: $account_id"
           
           if [ "$account_id" != "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
-            echo "⚠️  Warning: API token account ID doesn't match configured account!"
+            echo "❌ Account ID mismatch!"
             echo "   Token is for account: $account_id"
             echo "   Configured account: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
             exit 1
@@ -76,11 +80,9 @@ jobs:
         echo "✨ All checks passed! Ready to deploy."
       
     - name: Deploy to Cloudflare Pages
-      id: deployment
       uses: cloudflare/pages-action@v1
       with:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         directory: steam-punk-games
         projectName: mistereh-ca
-
