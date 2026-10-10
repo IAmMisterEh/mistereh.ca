@@ -23,7 +23,8 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
+        # Note: No cache needed for static site deployment
+        # cache: 'npm'  # Only needed if we had package.json
         
     - name: Install wrangler
       run: npm install -g wrangler
