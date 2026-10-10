@@ -19,41 +19,20 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install wrangler
+      run: npm install -g wrangler
+      
     - name: Validate Cloudflare credentials
       run: |
-        echo "🔍 Validating Cloudflare credentials before deployment..."
-        
-        # Check if secrets are set
-        if [ -z "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
-          echo "❌ CLOUDFLARE_ACCOUNT_ID not set!"
-          exit 1
-        fi
-        
-        if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
-          echo "❌ CLOUDFLARE_API_TOKEN not set!"
-          exit 1
-        fi
-        
-        # Check if token looks like the right type (Global API Key starts with cfk_)
-        if [[ ! "${{ secrets.CLOUDFLARE_API_TOKEN }}" =~ ^cfk_ ]]; then
-          echo "⚠️  Warning: API token doesn't start with 'cfk_'"
-          echo "   You might be using an API Token (cfat_) instead of a Global API Key (cfk_)"
-          echo "   Pages deployments require a Global API Key!"
-          exit 1
-        else
-          echo "✅ API token format looks correct (starts with 'cfk_')"
-        fi
-        
-        # Verify token length (should be 44: cfk_ + 40 hex chars)
-        token_length=$(echo -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" | wc -c)
-        if [ "$token_length" -ne 44 ]; then
-          echo "⚠️  Warning: Token length is $token_length chars (expected 44)"
-        else
-          echo "✅ Token length is correct (44 chars)"
-        fi
+        echo "🔍 Validating Cloudflare credentials..."
         
         # Test the credentials against Cloudflare API
-        echo "📡 Testing credentials with Cloudflare API..."
         response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/user" \
           -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
           -H "Content-Type: application/json")
@@ -77,12 +56,21 @@ jobs:
           exit 1
         fi
         
-        echo "✨ All checks passed! Ready to deploy."
+        echo "✨ Credentials validated. Ready to deploy."
       
     - name: Deploy to Cloudflare Pages
-      uses: cloudflare/pages-action@v1
-      with:
-        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        directory: steam-punk-games
-        projectName: mistereh-ca
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      run: |
+        echo "🚀 Deploying steam-punk-games to Cloudflare Pages..."
+        
+        cd steam-punk-games
+        
+        # Deploy using wrangler
+        wrangler pages deploy . \
+          --project-name=mistereh-ca \
+          --branch=main \
+          --commit-dirty=true
+        
+        echo "✅ Deployment complete!"
