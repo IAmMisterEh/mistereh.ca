@@ -39,7 +39,7 @@ jobs:
         # - /steam-punk-games/ → The game
         
         wrangler pages deploy . \
-          --project-name=mistereh-ca \
+          --project-name=mistereh-games-auto \
           --branch=main
         
         echo "✅ Deployment complete!"
