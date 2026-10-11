@@ -1,0 +1,9 @@
+name = "mistereh-games-redirect"
+main = "index.js"
+account_id = "a60a4cc516ca31e22aa31f41283edf06"
+
+# Route configuration: this Worker will handle all requests to mistereh.ca/steam-punk-games/*
+[routes]
+[[routes]]
+pattern = "mistereh.ca/steam-punk-games/*"
+custom_domain = true
