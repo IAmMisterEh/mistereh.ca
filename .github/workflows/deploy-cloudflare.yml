@@ -42,7 +42,6 @@ jobs:
         # Deploy using wrangler
         wrangler pages deploy . \
           --project-name=mistereh-ca \
-          --branch=main \
-          --commit-dirty=true
+          --branch=main
         
         echo "✅ Deployment complete!"
