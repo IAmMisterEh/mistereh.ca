@@ -1,0 +1,92 @@
+name: Deploy Steam-Punk Games Worker
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'steam-punk-games/**'
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    name: Deploy Game to Cloudflare Worker
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Install wrangler
+      run: npm install -g wrangler
+      
+    - name: Deploy as Worker serving static files
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      run: |
+        echo "🚀 Deploying steam-punk-games as a Worker..."
+        
+        # Create a simple worker that serves static files from steam-punk-games/
+        mkdir -p worker-dist
+        cp -r steam-punk-games/* worker-dist/
+        
+        # Create worker.js that serves files
+        cat > worker-dist/worker.js << 'EOF'
+        export default {
+          async fetch(request, env) {
+            const url = new URL(request.url);
+            let path = url.pathname;
+            
+            // Redirect /steam-punk-games to /steam-punk-games/
+            if (path === '/steam-punk-games') {
+              return Response.redirect(url.origin + '/steam-punk-games/', 302);
+            }
+            
+            // Serve files from /steam-punk-games/ path
+            if (path.startsWith('/steam-punk-games/')) {
+              path = path.replace('/steam-punk-games/', '/');
+            } else if (path === '/') {
+              // Serve main site
+              return env.MAIN_SITE.fetch(request);
+            }
+            
+            // Try to serve the file
+            const key = path.slice(1);
+            const asset = env.ASSETS.fetch(request);
+            return asset;
+          }
+        };
+        EOF
+        
+        # Create wrangler.toml for Worker with R2 binding
+        cat > worker-dist/wrangler.toml << EOF
+        name = "mistereh-games"
+        main = "worker.js"
+        account_id = "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+        
+        [assets]
+        directory = "."
+        binding = "ASSETS"
+        
+        # Route configuration
+        [routes]
+        [[routes]]
+        pattern = "mistereh.ca/steam-punk-games/*"
+        custom_domain = true
+        EOF
+        
+        # Deploy the worker
+        cd worker-dist
+        wrangler deploy
+        cd ..
+        
+        echo "✅ Deployment complete!"
+        echo "Game available at: https://mistereh.ca/steam-punk-games/"
