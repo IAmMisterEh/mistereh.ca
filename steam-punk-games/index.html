@@ -8,103 +8,66 @@
 </head>
 <body>
     <div id="game-container">
-        <!-- Main Menu -->
-        <div id="main-menu" class="menu-screen">
-            <div class="steampunk-panel">
-                <h1 class="title">⚙️ Clockwork Words v3.0 ⚙️</h1>
-                <h2 class="subtitle">SPIRAL ESCAPE</h2>
-                
-                <div class="game-info">
-                    <p>A steampunk typing challenge!</p>
-                    <ul class="instructions">
-                        <li>Type letters closest to the ENEMY BUBBLE</li>
-                        <li>Each hit pushes enemies back toward center</li>
-                        <li>Clear all bubbles before they escape!</li>
-                        <li>Build streaks for multiplier bonus</li>
-                    </ul>
-                </div>
-                
-                <button id="start-btn" class="steampunk-button">START GAME</button>
-                <button id="how-to-play-btn" class="steampunk-button secondary">HOW TO PLAY</button>
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen active">
+            <h1 class="main-title">CLOCKWORK WORDS v3.0</h1>
+            <h2 class="subtitle">SPIRAL ESCAPE</h2>
+            <div class="description">
+                <p>Type the letters as they reach the center of the spiral escape!</p>
+                <p>Each successful press sends letters spiraling outward.</p>
             </div>
-            
-            <!-- How to Play Modal -->
-            <div id="how-to-play-modal" class="modal hidden">
-                <div class="steampunk-panel modal-content">
-                    <h2>How to Play</h2>
-                    <div class="game-mechanics">
-                        <h3>Core Mechanics:</h3>
-                        <ul>
-                            <li><strong>Enemies spawn</strong> at center of spiral</li>
-                            <li><strong>Type closest letter</strong> to enemy bubble</li>
-                            <li><strong>Hits explode bubbles</strong>, pushing enemies back</li>
-                            <li><strong>Misses lose momentum</strong> with visual penalty</li>
-                            <li><strong>Win</strong> by clearing all enemies or reaching score goal</li>
-                        </ul>
-                        
-                        <h3>Progression:</h3>
-                        <ul>
-                            <li><strong>Lvl 1-2:</strong> Home row (a s d f j k l g h)</li>
-                            <li><strong>Lvl 3-4:</strong> Top row (e i r t u y q w o p)</li>
-                            <li><strong>Lvl 5-6:</strong> Bottom row (v b n m z x c , . /)</li>
-                            <li><strong>Lvl 7+:</strong> Numbers & symbols (! @ # $ % ^ & *)</li>
-                        </ul>
-                        
-                        <h3>Visual Elements:</h3>
-                        <ul>
-                            <li><strong>Spiral Path:</strong> Arched track for enemies to follow</li>
-                            <li><strong>Letter Bubbles:</strong> Spawn at center, push outward</li>
-                            <li><strong>Enemy Sprite:</strong> Brass cog following the spiral</li>
-                            <li><strong>Particles:</strong> Explode on hit for feedback</li>
-                        </ul>
-                    </div>
-                    <button id="close-how-to-btn" class="steampunk-button">GOT IT!</button>
-                </div>
+            <div id="keyboard-display" class="keyboard-display">
+                <!-- Keyboard layout will be rendered here -->
             </div>
+            <button id="start-btn" class="steam-button">INITIATE SEQUENCE</button>
         </div>
-        
+
         <!-- Game Screen -->
-        <div id="game-screen" class="game-screen hidden">
-            <canvas id="game-canvas"></canvas>
-            
-            <!-- HUD Overlay -->
+        <div id="game-screen" class="screen">
             <div id="hud">
                 <div class="hud-item">
-                    <span class="hud-label">LEVEL</span>
-                    <span id="level-display" class="hud-value">1</span>
+                    <span class="label">LEVEL</span>
+                    <span id="level-display">1/7</span>
                 </div>
                 <div class="hud-item">
-                    <span class="hud-label">SCORE</span>
-                    <span id="score-display" class="hud-value">0</span>
+                    <span class="label">STREAK</span>
+                    <span id="streak-display">0</span>
                 </div>
                 <div class="hud-item">
-                    <span class="hud-label">STREAK</span>
-                    <span id="streak-display" class="hud-value">1x</span>
-                </div>
-                <div class="hud-item">
-                    <span class="hud-label">BUBBLES</span>
-                    <span id="bubble-count" class="hud-value">0</span>
+                    <span class="label">SCORE</span>
+                    <span id="score-display">0</span>
                 </div>
             </div>
-            
-            <!-- Progress Bar -->
-            <div class="progress-container">
-                <div id="enemy-progress" class="progress-bar"></div>
-            </div>
-            
-            <!-- Game Over Screen -->
-            <div id="game-over-modal" class="modal hidden">
-                <div class="steampunk-panel modal-content">
-                    <h2 id="game-over-title">GAME OVER</h2>
-                    <p id="game-over-message"></p>
-                    <p>Final Score: <span id="final-score">0</span></p>
-                    <button id="play-again-btn" class="steampunk-button">PLAY AGAIN</button>
-                    <button id="menu-btn" class="steampunk-button secondary">MAIN MENU</button>
-                </div>
+            <canvas id="game-canvas"></canvas>
+            <div id="progress-bar" class="progress-bar">
+                <div id="progress-fill"></div>
             </div>
         </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="screen">
+            <h2 class="title">SYSTEM FAILURE</h2>
+            <p id="final-message"></p>
+            <div id="stats-display">
+                <p>Level Reached: <span id="final-level"></span></p>
+                <p>Final Score: <span id="final-score"></span></p>
+                <p>Best Streak: <span id="final-streak"></span></p>
+            </div>
+            <button id="restart-btn" class="steam-button">REBOOT SYSTEM</button>
+        </div>
+
+        <!-- Victory Screen -->
+        <div id="victory-screen" class="screen">
+            <h2 class="title title-victory">SEQUENCE COMPLETE!</h2>
+            <p>All 7 levels cleared. Escape protocol successful.</p>
+            <div id="stats-display">
+                <p>Final Score: <span id="victory-score"></span></p>
+                <p>Best Streak: <span id="victory-streak"></span></p>
+            </div>
+            <button id="play-again-btn" class="steam-button">PLAY AGAIN</button>
+        </div>
     </div>
-    
+
     <script src="game.js"></script>
 </body>
 </html>
