@@ -34,61 +34,36 @@ jobs:
         echo "   Account: $CLOUDFLARE_ACCOUNT_ID"
         echo "   Project: mistereh-games-auto"
         
-        # Create manifest for all static files
-        MANIFEST='['
-        FIRST=true
+        # Create manifest JSON
+        MANIFEST='[{"path":"index.html","mimetype":"text/html"},{"path":"steam-punk-games/index.html","mimetype":"text/html"},{"path":"steam-punk-games/game.js","mimetype":"application/javascript"},{"path":"steam-punk-games/game.css","mimetype":"text/css"}]'
         
-        # Add root index.html
-        if [ -f "index.html" ]; then
-          if [ "$FIRST" = true ]; then FIRST=false; else MANIFEST+=','; fi
-          MANIFEST+='{"path":"index.html","mimetype":"text/html"}'
-        fi
+        echo "Manifest created"
         
-        # Add steam-punk-games files
-        for file in steam-punk-games/*.html steam-punk-games/*.js steam-punk-games/*.css; do
-          if [ -f "$file" ]; then
-            if [ "$FIRST" = true ]; then FIRST=false; else MANIFEST+=','; fi
-            # Escape quotes in path
-            PATH_ESCAPED=$(echo "$file" | sed 's/"/\\"/g')
-            MIMETYPE="application/javascript"
-            [[ "$file" == *.html ]] && MIMETYPE="text/html"
-            [[ "$file" == *.css ]] && MIMETYPE="text/css"
-            MANIFEST+='{"path":"'"$PATH_ESCAPED"'","mimetype":"'"$MIMETYPE"'"}'
-          fi
-        done
-        MANIFEST+=']'
-        
-        echo "Manifest: $MANIFEST"
-        
-        # Build the curl command with all files
-        CURL_CMD="curl -s -X POST \"https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mistereh-games-auto/deployments\""
-CURL_CMD+=" -H \"Authorization: Bearer $CLOUDFLARE_API_TOKEN\""
-CURL_CMD+=" -F \"manifest=$MANIFEST\""
-        
-        # Add root index.html
-        if [ -f "index.html" ]; then
-          CURL_CMD+=" -F \"index.html=@./index.html\""
-        fi
-        
-        # Add steam-punk-games files
-        for file in steam-punk-games/*.html steam-punk-games/*.js steam-punk-games/*.css; do
-          if [ -f "$file" ]; then
-            FILENAME=$(basename "$file")
-            CURL_CMD+=" -F \"steam-punk-games/$FILENAME=@./$file\""
-          fi
-        done
-        
+        # Upload files to Cloudflare Pages
         echo "Uploading files..."
-        DEPLOY_RESULT=$($CURL_CMD)
+        DEPLOY_RESULT=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mistereh-games-auto/deployments" \
+          -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+          -F "manifest=$MANIFEST" \
+          -F "index.html=@./index.html" \
+          -F "steam-punk-games/index.html=@./steam-punk-games/index.html" \
+          -F "steam-punk-games/game.js=@./steam-punk-games/game.js" \
+          -F "steam-punk-games/game.css=@./steam-punk-games/game.css")
         
         # Extract deployment info
-        DEPLOY_ID=$(echo "$DEPLOY_RESULT" | jq -r '.result.short_id')
-        DEPLOY_URL=$(echo "$DEPLOY_RESULT" | jq -r '.result.url')
+        DEPLOY_ID=$(echo "$DEPLOY_RESULT" | jq -r '.result.short_id // "unknown"')
+        DEPLOY_URL=$(echo "$DEPLOY_RESULT" | jq -r '.result.url // "unknown"')
+        STATUS=$(echo "$DEPLOY_RESULT" | jq -r '.success // false')
         
-        echo "✅ Deployment triggered!"
-        echo "Deployment ID: $DEPLOY_ID"
-        echo "URL: $DEPLOY_URL"
-        echo ""
-        echo "After build completes (~2-5 min):"
-        echo "Main site: https://mistereh.ca/"
-        echo "Game: https://mistereh.ca/steam-punk-games/"
+        if [ "$STATUS" = "true" ]; then
+          echo "✅ Deployment triggered successfully!"
+          echo "Deployment ID: $DEPLOY_ID"
+          echo "URL: $DEPLOY_URL"
+          echo ""
+          echo "After build completes (~2-5 min):"
+          echo "Main site: https://mistereh.ca/"
+          echo "Game: https://mistereh.ca/steam-punk-games/"
+        else
+          echo "❌ Deployment failed!"
+          echo "Response: $DEPLOY_RESULT"
+          exit 1
+        fi
