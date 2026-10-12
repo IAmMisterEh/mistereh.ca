@@ -25,23 +25,70 @@ jobs:
     - name: Install wrangler
       run: npm install -g wrangler
       
-    - name: Deploy entire site
+    - name: Deploy entire site via Cloudflare API
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       run: |
         echo "🚀 Deploying entire mistereh.ca site (including steam-punk-games/)..."
         echo "   Account: $CLOUDFLARE_ACCOUNT_ID"
+        echo "   Project: mistereh-games-auto"
         
-        # Deploy the entire repo content
-        # This will serve:
-        # - / → Main site (Coming soon page)
-        # - /steam-punk-games/ → The game
+        # Create manifest for all static files
+        MANIFEST='['
+        FIRST=true
         
-        wrangler pages deploy . \
-          --project-name=mistereh-games-auto \
-          --branch=main
+        # Add root index.html
+        if [ -f "index.html" ]; then
+          if [ "$FIRST" = true ]; then FIRST=false; else MANIFEST+=','; fi
+          MANIFEST+='{"path":"index.html","mimetype":"text/html"}'
+        fi
         
-        echo "✅ Deployment complete!"
+        # Add steam-punk-games files
+        for file in steam-punk-games/*.html steam-punk-games/*.js steam-punk-games/*.css; do
+          if [ -f "$file" ]; then
+            if [ "$FIRST" = true ]; then FIRST=false; else MANIFEST+=','; fi
+            # Escape quotes in path
+            PATH_ESCAPED=$(echo "$file" | sed 's/"/\\"/g')
+            MIMETYPE="application/javascript"
+            [[ "$file" == *.html ]] && MIMETYPE="text/html"
+            [[ "$file" == *.css ]] && MIMETYPE="text/css"
+            MANIFEST+='{"path":"'"$PATH_ESCAPED"'","mimetype":"'"$MIMETYPE"'"}'
+          fi
+        done
+        MANIFEST+=']'
+        
+        echo "Manifest: $MANIFEST"
+        
+        # Build the curl command with all files
+        CURL_CMD="curl -s -X POST \"https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mistereh-games-auto/deployments\""
+CURL_CMD+=" -H \"Authorization: Bearer $CLOUDFLARE_API_TOKEN\""
+CURL_CMD+=" -F \"manifest=$MANIFEST\""
+        
+        # Add root index.html
+        if [ -f "index.html" ]; then
+          CURL_CMD+=" -F \"index.html=@./index.html\""
+        fi
+        
+        # Add steam-punk-games files
+        for file in steam-punk-games/*.html steam-punk-games/*.js steam-punk-games/*.css; do
+          if [ -f "$file" ]; then
+            FILENAME=$(basename "$file")
+            CURL_CMD+=" -F \"steam-punk-games/$FILENAME=@./$file\""
+          fi
+        done
+        
+        echo "Uploading files..."
+        DEPLOY_RESULT=$($CURL_CMD)
+        
+        # Extract deployment info
+        DEPLOY_ID=$(echo "$DEPLOY_RESULT" | jq -r '.result.short_id')
+        DEPLOY_URL=$(echo "$DEPLOY_RESULT" | jq -r '.result.url')
+        
+        echo "✅ Deployment triggered!"
+        echo "Deployment ID: $DEPLOY_ID"
+        echo "URL: $DEPLOY_URL"
+        echo ""
+        echo "After build completes (~2-5 min):"
         echo "Main site: https://mistereh.ca/"
         echo "Game: https://mistereh.ca/steam-punk-games/"
