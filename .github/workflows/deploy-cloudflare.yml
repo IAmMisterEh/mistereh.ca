@@ -34,8 +34,8 @@ jobs:
         echo "   Account: $CLOUDFLARE_ACCOUNT_ID"
         echo "   Project: mistereh-games-auto"
         
-        # Create manifest JSON
-        MANIFEST='[{"path":"index.html","mimetype":"text/html"},{"path":"steam-punk-games/index.html","mimetype":"text/html"},{"path":"steam-punk-games/game.js","mimetype":"application/javascript"},{"path":"steam-punk-games/game.css","mimetype":"text/css"}]'
+        # Create manifest JSON with BOTH paths
+        MANIFEST='[{"path":"index.html","mimetype":"text/html"},{"path":"steam-punk-games/index.html","mimetype":"text/html"},{"path":"steam-punk-games/game.js","mimetype":"application/javascript"},{"path":"steam-punk-games/game.css","mimetype":"text/css"},{"path":"games/typing/index.html","mimetype":"text/html"},{"path":"games/typing/game.js","mimetype":"application/javascript"},{"path":"games/typing/game.css","mimetype":"text/css"}]'
         
         echo "Manifest created"
         
@@ -47,7 +47,10 @@ jobs:
           -F "index.html=@./index.html" \
           -F "steam-punk-games/index.html=@./steam-punk-games/index.html" \
           -F "steam-punk-games/game.js=@./steam-punk-games/game.js" \
-          -F "steam-punk-games/game.css=@./steam-punk-games/game.css")
+          -F "steam-punk-games/game.css=@./steam-punk-games/game.css" \
+          -F "games/typing/index.html=@./steam-punk-games/index.html" \
+          -F "games/typing/game.js=@./steam-punk-games/game.js" \
+          -F "games/typing/game.css=@./steam-punk-games/game.css")
         
         # Extract deployment info
         DEPLOY_ID=$(echo "$DEPLOY_RESULT" | jq -r '.result.short_id // "unknown"')
@@ -61,7 +64,9 @@ jobs:
           echo ""
           echo "After build completes (~2-5 min):"
           echo "Main site: https://mistereh.ca/"
-          echo "Game: https://mistereh.ca/steam-punk-games/"
+          echo "Game (old path): https://mistereh.ca/steam-punk-games/"
+          echo "Game (new path): https://mistereh.ca/games/typing/"
+          echo "Both paths serve the same v3.0 game files!"
         else
           echo "❌ Deployment failed!"
           echo "Response: $DEPLOY_RESULT"
