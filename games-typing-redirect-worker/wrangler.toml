@@ -1,0 +1,10 @@
+name = "games-typing-redirect"
+main = "index.js"
+account_id = "a60a4cc516ca31e22aa31f41283edf06"
+compatibility_date = "2026-10-13"
+
+# Route configuration: handle requests to mistereh.ca/games/typing
+# This binds the Worker directly to the zone, bypassing Pages route issues
+routes = [
+  { pattern = "mistereh.ca/games/typing*", zone_name = "mistereh.ca" }
+]
