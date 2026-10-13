@@ -1,0 +1,9 @@
+name = "mistereh-router"
+main = "index.js"
+account_id = "a60a4cc516ca31e22aa31f41283edf06"
+compatibility_date = "2026-10-12"
+
+# Route configuration: handle all requests to mistereh.ca
+routes = [
+  { pattern = "mistereh.ca/*", zone_name = "mistereh.ca" }
+]
