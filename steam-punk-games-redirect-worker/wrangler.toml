@@ -3,7 +3,10 @@ main = "index.js"
 account_id = "a60a4cc516ca31e22aa31f41283edf06"
 compatibility_date = "2026-10-11"
 
-# Route configuration: handle requests to games.mistereh.ca
+# Routes configuration:
+# - mistereh.ca/games/* → handles path-based route
+# - games.mistereh.ca/* → keeps subdomain fallback
 routes = [
+  { pattern = "mistereh.ca/games/*", zone_name = "mistereh.ca" },
   { pattern = "games.mistereh.ca/*", zone_name = "mistereh.ca" }
 ]
