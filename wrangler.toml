@@ -1,6 +1,13 @@
-name = "clockwork-words-v2"
-type = "pages"
-account_id = "a60a4cc516ca31e22aa31f41283edf06"
+name = "steam-punk-games"
+compatibility_date = "2026-10-03"
+compatibility_flags = ["nodejs_compat"]
 
-[vars]
-ENVIRONMENT = "production"
+[placement]
+mode = "smart"
+
+routes = [
+  { pattern = "mistereh.ca/steam-punk-games/*", zone_name = "mistereh.ca" }
+]
+
+# Serve static files from root directory
+pages_build_output_dir = "."
