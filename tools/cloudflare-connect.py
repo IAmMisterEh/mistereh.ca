@@ -71,8 +71,11 @@ def setup_cloudflare_project(project_name, repo_name, root_dir, headless=True):
     log(f"Root directory: {root_dir}")
 
     with sync_playwright() as p:
-        # Launch browser (headless by default)
-        browser = p.chromium.launch(headless=headless)
+        # Use system Chromium (installed via snap) to avoid download issues
+        browser = p.chromium.launch(
+            headless=headless,
+            executable_path="/snap/bin/chromium"
+        )
         context = browser.new_context(
             viewport={"width": 1920, "height": 1080},
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"

@@ -13,6 +13,13 @@ export default {
     // Extract the path
     const path = url.pathname;
     
+    // Route: mistereh.ca/games/typing* → Clockwork Words (redirect to steam-punk-games)
+    if (path === '/games/typing' || path.startsWith('/games/typing/')) {
+      const gamePath = path.replace('/games/typing', '') || '/';
+      const targetUrl = new URL(gamePath + (url.search || ''), GAMES_PROJECT_URL + '/steam-punk-games/');
+      return Response.redirect(targetUrl.toString(), 302);
+    }
+
     // Route: mistereh.ca/steam-punk-games/* → Game project
     if (path.startsWith('/steam-punk-games/')) {
       const gamePath = path.replace('/steam-punk-games', '');

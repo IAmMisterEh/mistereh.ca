@@ -1,0 +1,9 @@
+name = "games-unified-worker"
+main = "index.js"
+account_id = "a60a4cc516ca31e22aa31f41283edf06"
+compatibility_date = "2026-10-13"
+
+# Route configuration: handle all /games/* requests
+routes = [
+  { pattern = "mistereh.ca/games/*", zone_name = "mistereh.ca" }
+]
