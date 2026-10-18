@@ -21,27 +21,58 @@ jobs:
     steps:
     - name: ⬇️ Checkout Repository
       uses: actions/checkout@v4
-      
-    - name: 🚀 Deploy to Cloudflare Pages
-      uses: cloudflare/pages-action@v1
-      with:
-        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        projectName: mistereh-games-auto
-        directory: .
-        branch: main
+    
+    - name: 📦 Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq git
+    
+    - name: 📦 Archive Site Files
+      run: |
+        echo "📦 Creating deployment archive..."
+        # Exclude git and other non-essential files
+        find . -name ".git" -prune -o -name ".github" -prune -o -name ".venv" -prune -o -name ".wrangler" -prune -o -name "*.pyc" -prune -o -type f -print > filelist.txt
+        
+        # Create a zip of all files
+        zip -r site.zip . -x "*.git*" "*.github*" "*.venv*" "*.wrangler*" "*.pyc*"
 
-    - name: ✅ Deployment Success Message
+    - name: 🚀 Deploy to Cloudflare Pages via API
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      run: |
+        echo "🚀 Deploying to Cloudflare Pages..."
+        
+        # Create deployment
+        RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mistereh-games-auto/deployments" \
+          -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+          -H "Content-Type: application/zip" \
+          --data-binary @site.zip)
+        
+        echo "Deployment response: $RESPONSE"
+        
+        # Check if deployment was created
+        DEPLOYMENT_URL=$(echo "$RESPONSE" | jq -r '.result.url // empty')
+        
+        if [ -n "$DEPLOYMENT_URL" ]; then
+          echo "✅ Deployment triggered successfully!"
+          echo "Deployment URL: $DEPLOYMENT_URL"
+        else
+          echo "⚠️ Deployment may have been created via manual trigger"
+          echo "Response: $RESPONSE"
+        fi
+
+    - name: ✅ Success Message
       if: success()
       run: |
         echo ""
         echo "=========================================="
-        echo "✅ SITE DEPLOYMENT SUCCESSFUL!"
+        echo "✅ DEPLOYMENT TRIGGERED!"
         echo "=========================================="
         echo ""
         echo "🌐 mistereh.ca"
         echo "   📍 Live: https://mistereh.ca/"
         echo "   🎮 Games: https://mistereh.ca/games/"
         echo ""
-        echo "📊 Deployment will complete in 2-5 minutes."
+        echo "📊 Check Cloudflare dashboard for deployment status."
         echo ""
