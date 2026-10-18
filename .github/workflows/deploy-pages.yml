@@ -58,15 +58,13 @@ jobs:
 
     - name: 🏗️ Deploy Entire Site to Cloudflare Pages
       run: |
-        export CLOUDFLARE_ACCOUNT_ID="${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
         export CLOUDFLARE_API_TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}"
         
         echo "🚀 Deploying entire site to mistereh-games-auto project..."
         
-        # Deploy from root directory
+        # Deploy from root directory (account auto-detected from token)
         if wrangler pages deploy . \
           --project-name=mistereh-games-auto \
-          --account-id="$CLOUDFLARE_ACCOUNT_ID" \
           --commit-hash="${{ github.sha }}" \
           --commit-message="Site update: ${{ github.event.head_commit.message }}"; then
           echo "✅ Deployment triggered successfully!"
