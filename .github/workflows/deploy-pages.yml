@@ -22,56 +22,14 @@ jobs:
     - name: ⬇️ Checkout Repository
       uses: actions/checkout@v4
       
-    - name: 🔍 Pre-flight Validation
-      run: |
-        echo "🔍 Validating Cloudflare Pages deployment prerequisites..."
-        
-        if [ -z "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
-          echo "❌ ERROR: CLOUDFLARE_ACCOUNT_ID not configured"
-          exit 1
-        fi
-        
-        if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
-          echo "❌ ERROR: CLOUDFLARE_API_TOKEN not configured"
-          exit 1
-        fi
-        
-        ACCOUNT_ID="${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
-        if [[ ! "$ACCOUNT_ID" =~ ^[a-f0-9]{32}$ ]]; then
-          echo "❌ ERROR: Invalid CLOUDFLARE_ACCOUNT_ID format (must be 32-char hex)"
-          exit 1
-        fi
-        
-        TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}"
-        if [[ ! "$TOKEN" =~ ^(cfk_|cfat_|cfut_) ]]; then
-          echo "❌ ERROR: CLOUDFLARE_API_TOKEN must start with cfk_*, cfat_*, or cfut_*"
-          echo "   Current value starts with: ${TOKEN:0:4}..."
-          exit 1
-        fi
-        
-        echo "✅ Credentials validated!"
-
-    - name: 📦 Install Wrangler CLI
-      run: |
-        npm install -g wrangler@3
-        wrangler --version
-
-    - name: 🏗️ Deploy Entire Site to Cloudflare Pages
-      run: |
-        export CLOUDFLARE_API_TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}"
-        
-        echo "🚀 Deploying entire site to mistereh-games-auto project..."
-        
-        # Deploy from root directory (account auto-detected from token)
-        if wrangler pages deploy . \
-          --project-name=mistereh-games-auto \
-          --commit-hash="${{ github.sha }}" \
-          --commit-message="Site update: ${{ github.event.head_commit.message }}"; then
-          echo "✅ Deployment triggered successfully!"
-        else
-          echo "❌ Deployment failed!"
-          exit 1
-        fi
+    - name: 🚀 Deploy to Cloudflare Pages
+      uses: cloudflare/pages-action@v1
+      with:
+        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        projectName: mistereh-games-auto
+        directory: .
+        branch: main
 
     - name: ✅ Deployment Success Message
       if: success()
