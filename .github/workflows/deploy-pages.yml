@@ -8,6 +8,7 @@ on:
       - '!steam-punk-games/**'
       - '!.github/workflows/deploy-clockwork-final.yml'
       - '!.github/workflows/deploy-redirect-worker.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,19 +23,10 @@ jobs:
     - name: ⬇️ Checkout Repository
       uses: actions/checkout@v4
     
-    - name: 📦 Install Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y jq git
-    
     - name: 📦 Archive Site Files
       run: |
         echo "📦 Creating deployment archive..."
-        # Exclude git and other non-essential files
-        find . -name ".git" -prune -o -name ".github" -prune -o -name ".venv" -prune -o -name ".wrangler" -prune -o -name "*.pyc" -prune -o -type f -print > filelist.txt
-        
-        # Create a zip of all files
-        zip -r site.zip . -x "*.git*" "*.github*" "*.venv*" "*.wrangler*" "*.pyc*"
+        zip -r site.zip . -x "*.git*" "*.github*" "*.venv*" "*.wrangler*" "*.pyc*" "node_modules/*"
 
     - name: 🚀 Deploy to Cloudflare Pages via API
       env:
@@ -42,24 +34,17 @@ jobs:
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       run: |
         echo "🚀 Deploying to Cloudflare Pages..."
-        
-        # Create deployment
         RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mistereh-games-auto/deployments" \
           -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
           -H "Content-Type: application/zip" \
           --data-binary @site.zip)
-        
         echo "Deployment response: $RESPONSE"
-        
-        # Check if deployment was created
         DEPLOYMENT_URL=$(echo "$RESPONSE" | jq -r '.result.url // empty')
-        
         if [ -n "$DEPLOYMENT_URL" ]; then
           echo "✅ Deployment triggered successfully!"
           echo "Deployment URL: $DEPLOYMENT_URL"
         else
-          echo "⚠️ Deployment may have been created via manual trigger"
-          echo "Response: $RESPONSE"
+          echo "⚠️ Check Cloudflare dashboard for deployment status"
         fi
 
     - name: ✅ Success Message
@@ -69,10 +54,7 @@ jobs:
         echo "=========================================="
         echo "✅ DEPLOYMENT TRIGGERED!"
         echo "=========================================="
-        echo ""
         echo "🌐 mistereh.ca"
         echo "   📍 Live: https://mistereh.ca/"
         echo "   🎮 Games: https://mistereh.ca/games/"
-        echo ""
-        echo "📊 Check Cloudflare dashboard for deployment status."
         echo ""
