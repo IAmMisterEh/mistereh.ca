@@ -114,3 +114,4 @@ jobs:
         echo "🎮 Clockwork Words v3.0 - Spiral Escape"
         echo "   📍 Live: https://clockwork-words-v3.pages.dev/"
         echo ""
+# Updated Oct 22 2026 - removed hardcoded token

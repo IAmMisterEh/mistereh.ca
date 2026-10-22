@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Grade 6 Electricity Discovery Hub v4.1</title>
+    <style>
+        :root {
+            --bg-color: #0b0e14;
+            --circuit-green: #00ff9d;
+            --circuit-blue: #00d4ff;
+            --text-color: #e0e0e0;
+            --panel-bg: #1a1f29;
+            --highlight: #ffcc00;
+            --neutral-border: #444;
+        }
+
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow-x: hidden; touch-action: manipulation; }
+        #header { text-align: center; padding: 15px; border-bottom: 3px solid var(--circuit-green); width: 100%; background: rgba(11,14,20,0.9); }
+        .stats-bar { background: #252a35; padding: 10px 20px; border-radius: 20px; margin: 10px; border: 1px solid var(--circuit-blue); display: inline-block; font-weight: bold; }
+
+        .hub-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; max-width: 1000px; }
+        .game-card { background: var(--panel-bg); border: 2px solid #333; border-radius: 12px; width: 220px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; }
+        .game-card:hover { border-color: var(--circuit-green); transform: translateY(-3px); }
+
+        #game-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 100; flex-direction: column; align-items: center; padding: 10px; overflow-y: auto; }
+        .btn { background: var(--circuit-blue); color: #000; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 5px; text-transform: uppercase; }
+        .btn-back { background: #444; color: white; margin-top: 20px; }
+
+        /* WORD SEARCH GRID */
+        #grid-container { 
+            display: grid; grid-template-columns: repeat(15, 1fr); gap: 2px; 
+            background: #333; padding: 4px; border-radius: 4px; width: 95vw; max-width: 480px; 
+            user-select: none; touch-action: none; 
+        }
+        .grid-cell { 
+            aspect-ratio: 1/1; background: var(--panel-bg); display: flex; 
+            align-items: center; justify-content: center; font-weight: bold; 
+            font-size: 14px; pointer-events: auto; cursor: pointer;
+        }
+        .grid-cell.active-drag { background: var(--highlight) !important; color: black; }
+        .grid-cell.found-word { background: var(--circuit-green) !important; color: black !important; }
+        .word-item { padding: 5px 10px; background: #222; border-radius: 4px; }
+        .word-item.found { text-decoration: line-through; color: var(--circuit-green); opacity: 0.6; }
+
+        /* MATCHING UI */
+        .match-btn { width: 100%; padding: 12px; background: #1a1f29; border: 2px solid var(--neutral-border); color: white; border-radius: 6px; cursor: pointer; margin-bottom: 8px; font-size: 0.9rem; }
+        .match-btn.selected { border-color: var(--highlight); box-shadow: 0 0 10px var(--highlight); }
+
+        .xp-pop { position: fixed; color: var(--highlight); font-weight: bold; animation: floatUp 1.5s forwards; pointer-events: none; z-index: 200; }
+        @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-50px); opacity: 0; } }
+        
+        .correct { color: var(--circuit-green); font-weight: bold; margin: 10px; }
+        .wrong { color: #ff4444; margin: 5px; }
+        input[type="text"] { background: #111; color: white; border: 1px solid var(--circuit-blue); border-radius: 4px; outline: none; }
+    </style>
+</head>
+<body>
+
+<div id="header">
+    <h1>ELECTRICITY DISCOVERY HUB</h1>
+    <div class="stats-bar">XP: <span id="xp-display">0</span></div>
+</div>
+
+<div class="hub-container" id="main-menu">
+    <div class="game-card" onclick="startGame('search')"><h3>⚡ Word Search</h3><p>Find & Drag</p></div>
+    <div class="game-card" onclick="startGame('match')"><h3>🔗 Connection Match</h3><p>Terms & Definitions</p></div>
+    <div class="game-card" onclick="startGame('morph')"><h3>🧩 Morphology</h3><p>Root Fragments</p></div>
+    <div class="game-card" onclick="startGame('syntax')"><h3>✍️ Syntax Lab</h3><p>Scientific Context</p></div>
+</div>
+
+<div id="game-overlay">
+    <div id="game-content" style="width: 100%; max-width: 700px; display: flex; flex-direction: column; align-items: center;"></div>
+    <button class="btn btn-back" onclick="closeGame()">Return to Hub</button>
+</div>
+
+<script>
+    const DATA = {
+        concepts: [
+            {t: "ELECTRICITY", d: "Energy from movement of charged particles.", p: ["ELECTRI", "CITY"]},
+            {t: "CURRENT", d: "Flow of electrons through a circuit.", p: ["CURR", "ENT"]},
+            {t: "STATIC", d: "Charge imbalance caused by friction.", p: ["STAT", "IC"]},
+            {t: "INSULATOR", d: "Material that resists electrical flow.", p: ["IN", "SUL", "ATOR"]},
+            {t: "ELECTRON", d: "Negatively charged particle.", p: ["ELECTR", "ON"]},
+            {t: "VOLTAGE", d: "Pressure pushing electrons through a circuit.", p: ["VOLT", "AGE"]},
+            {t: "TRANSFORMATION", d: "Changing energy from one form to another.", p: ["TRANS", "FORM", "ATION"]},
+            {t: "CIRCUIT", d: "A complete loop for electricity to flow.", p: ["CIR", "CUIT"]},
+            {t: "SWITCH", d: "A component that opens or closes a circuit.", p: ["SWI", "TCH"]},
+            {t: "LOAD", d: "Component that consumes electricity to work.", p: ["LO", "AD"]},
+            {t: "PARALLEL", d: "Circuit with multiple paths for current.", p: ["PAR", "ALL", "EL"]},
+            {t: "SERIES", d: "Circuit with only one path for current.", p: ["SER", "IES"]}
+        ],
+        people: [
+            {t: "BENJAMIN FRANKLIN", d: "Proved lightning is electricity."},
+            {t: "THOMAS EDISON", d: "Created practical light bulbs."},
+            {t: "NIKOLA TESLA", d: "Pioneered AC electricity systems."}
+        ]
+    };
+
+    let sessionXP = parseInt(localStorage.getItem('electricityXP')) || 0;
+    const colors = ["#ff00ff", "#00ffff", "#ffff00", "#ff8800", "#00ff00", "#ff4444"];
+    updateXP(0);
+
+    function updateXP(a, x, y) {
+        if(a > 0) {
+            sessionXP += a;
+            document.getElementById('xp-display').innerText = sessionXP;
+            localStorage.setItem('electricityXP', sessionXP);
+            if(x && y) showXPPop(a, x, y);
+        }
+    }
+
+    function showXPPop(a, x, y) {
+        const p = document.createElement('div');
+        p.className = 'xp-pop'; p.innerText = `+${a} XP`;
+        p.style.left = x + 'px'; p.style.top = y + 'px';
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 1500);
+    }
+
+    function startGame(m) {
+        document.getElementById('game-overlay').style.display = 'flex';
+        const c = document.getElementById('game-content');
+        c.innerHTML = '';
+        if(m === 'search') initSearch(c);
+        if(m === 'match') initMatch(c);
+        if(m === 'morph') initMorph(c);
+        if(m === 'syntax') initSyntax(c);
+    }
+
+    function closeGame() { document.getElementById('game-overlay').style.display = 'none'; }
+
+    /* --- WORD SEARCH: AUTO-LOOP --- */
+    function initSearch(container) {
+        container.innerHTML = '<h2>Word Search</h2><div id="grid-container"></div><div id="word-list" style="margin-top:15px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center;"></div><div id="search-foot"></div>';
+        const size = 15;
+        let grid = Array(size).fill().map(() => Array(size).fill(''));
+        let words = DATA.concepts.map(c => c.t).sort(() => 0.5-Math.random()).slice(0, 6);
+        let placedWords = [];
+        let foundCount = 0;
+
+        words.forEach(w => {
+            let placed = false;
+            while(!placed) {
+                let dir = [{x:1,y:0},{x:0,y:1},{x:1,y:1}][Math.floor(Math.random()*3)];
+                let r = Math.floor(Math.random()*size), c = Math.floor(Math.random()*size);
+                if(r + w.length*dir.y < size && c + w.length*dir.x < size) {
+                    let fit = true;
+                    for(let i=0; i<w.length; i++) if(grid[r+i*dir.y][c+i*dir.x] !== '') fit = false;
+                    if(fit) {
+                        let coords = [];
+                        for(let i=0; i<w.length; i++) {
+                            grid[r+i*dir.y][c+i*dir.x] = w[i];
+                            coords.push(`${r+i*dir.y}-${c+i*dir.x}`);
+                        }
+                        placedWords.push({word: w, cells: coords, found: false});
+                        placed = true;
+                    }
+                }
+            }
+        });
+
+        const gridEl = document.getElementById('grid-container');
+        for(let r=0; r<size; r++) {
+            for(let c=0; c<size; c++) {
+                if(grid[r][c] === '') grid[r][c] = String.fromCharCode(65 + Math.floor(Math.random()*26));
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell'; cell.innerText = grid[r][c];
+                cell.dataset.pos = `${r}-${c}`;
+                gridEl.appendChild(cell);
+            }
+        }
+
+        const listEl = document.getElementById('word-list');
+        placedWords.forEach(pw => {
+            const s = document.createElement('span'); s.innerText = pw.word;
+            s.className = 'word-item'; s.id = 'word-' + pw.word;
+            listEl.appendChild(s);
+        });
+
+        let isDragging = false, startPos = null;
+        const getPos = (e) => {
+            const touch = e.touches ? e.touches[0] : e;
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            return (target && target.classList.contains('grid-cell')) ? target.dataset.pos : null;
+        };
+
+        gridEl.onmousedown = gridEl.ontouchstart = (e) => { isDragging = true; startPos = getPos(e); };
+
+        window.onmousemove = window.ontouchmove = (e) => {
+            if(!isDragging || !startPos) return;
+            const currentPos = getPos(e);
+            if(currentPos) {
+                document.querySelectorAll('.active-drag').forEach(c => c.classList.remove('active-drag'));
+                const [r1, c1] = startPos.split('-').map(Number), [r2, c2] = currentPos.split('-').map(Number);
+                const dr = Math.sign(r2 - r1), dc = Math.sign(c2 - c1);
+                let currR = r1, currC = c1;
+                while(true) {
+                    const el = document.querySelector(`[data-pos="${currR}-${currC}"]`);
+                    if(el) el.classList.add('active-drag');
+                    if(currR === r2 && currC === c2) break;
+                    currR += dr; currC += dc;
+                    if(currR < 0 || currR >= size || currC < 0 || currC >= size) break;
+                }
+            }
+        };
+
+        window.onmouseup = window.ontouchend = () => {
+            if(!isDragging) return; isDragging = false;
+            const selected = Array.from(document.querySelectorAll('.active-drag')).map(c => c.dataset.pos);
+            placedWords.forEach(pw => {
+                if(!pw.found && pw.cells.length === selected.length && pw.cells.every(val => selected.includes(val))) {
+                    pw.found = true; foundCount++;
+                    pw.cells.forEach(pos => document.querySelector(`[data-pos="${pos}"]`).classList.add('found-word'));
+                    document.getElementById('word-' + pw.word).classList.add('found');
+                    updateXP(100, window.innerWidth/2, window.innerHeight/2);
+                    if(foundCount === placedWords.length) {
+                        document.getElementById('search-foot').innerHTML = '<h3 class="correct">ALL WORDS FOUND!</h3><button class="btn" onclick="startGame(\'search\')">Next Grid ➔</button>';
+                    }
+                }
+            });
+            document.querySelectorAll('.active-drag').forEach(c => c.classList.remove('active-drag'));
+        };
+    }
+
+    /* --- CONNECTION MATCH --- */
+    function initMatch(container) {
+        let matchesFound = 0;
+        container.innerHTML = '<h2>Connection Match</h2><p>Link the items.</p><div style="display:flex; width:100%; gap:15px;"><div id="t-col" style="flex:1"></div><div id="d-col" style="flex:1"></div></div><div id="match-footer"></div>';
+        const pool = [...DATA.concepts, ...DATA.people].sort(() => 0.5-Math.random()).slice(0,5);
+        let selected = null, colorIdx = 0;
+
+        pool.forEach(item => {
+            const b = document.createElement('button'); b.className = 'match-btn'; b.innerText = item.t;
+            b.onclick = () => { document.querySelectorAll('#t-col .match-btn').forEach(x=>x.classList.remove('selected')); b.classList.add('selected'); selected = item; };
+            document.getElementById('t-col').appendChild(b);
+        });
+
+        [...pool].sort(() => 0.5-Math.random()).forEach(item => {
+            const b = document.createElement('button'); b.className = 'match-btn'; b.innerText = item.d;
+            b.onclick = (e) => {
+                if(selected && selected.t === item.t) {
+                    const c = colors[colorIdx++ % colors.length];
+                    b.style.background = c + "44"; b.style.borderColor = c; b.disabled = true;
+                    const match = Array.from(document.querySelectorAll('#t-col .match-btn')).find(x => x.innerText === selected.t);
+                    match.style.background = c + "44"; match.style.borderColor = c; match.disabled = true;
+                    updateXP(50, e.clientX, e.clientY); selected = null; matchesFound++;
+                    if(matchesFound === 5) document.getElementById('match-footer').innerHTML = '<button class="btn" onclick="startGame(\'match\')">Next Round ➔</button>';
+                } else {
+                    b.style.borderColor = "red"; setTimeout(()=>b.style.borderColor="var(--neutral-border)", 500);
+                }
+            };
+            document.getElementById('d-col').appendChild(b);
+        });
+    }
+
+    /* --- MORPHOLOGY LAB --- */
+    function initMorph(container) {
+        const item = DATA.concepts[Math.floor(Math.random()*DATA.concepts.length)];
+        container.innerHTML = `<h2>Morphology Lab</h2><p>${item.d}</p><div id="m-bin" style="margin:20px;"></div><div id="m-zone" style="min-height:60px; border:2px dashed #444; display:flex; justify-content:center; gap:10px; align-items:center; width:100%;"></div><div id="m-foot"></div>`;
+        [...item.p].sort(() => 0.5-Math.random()).forEach(part => {
+            const b = document.createElement('button'); b.className = 'btn'; b.innerText = part;
+            b.onclick = (e) => {
+                document.getElementById('m-zone').appendChild(b);
+                if(document.getElementById('m-zone').innerText.replace(/\s/g,'') === item.t) {
+                    updateXP(120, e.clientX, e.clientY);
+                    document.getElementById('m-foot').innerHTML = '<h3 class="correct">XP AWARDED!</h3><button class="btn" onclick="startGame(\'morph\')">Next Word</button>';
+                }
+            };
+            document.getElementById('m-bin').appendChild(b);
+        });
+    }
+
+    /* --- SYNTAX LAB --- */
+    function initSyntax(container) {
+        const bank = [
+            {s: "The flow of electrons is called a ____.", a: "CURRENT"},
+            {s: "Rubber is an ____ because it resists electrical flow.", a: "INSULATOR"},
+            {s: "Pressure that pushes electrons through a circuit is ____.", a: "VOLTAGE"},
+            {s: "A ____ can open or close an electrical loop.", a: "SWITCH"},
+            {s: "A ____ circuit has multiple branches for electricity.", a: "PARALLEL"},
+            {s: "A ____ circuit has only one single path.", a: "SERIES"}
+        ];
+        const p = bank[Math.floor(Math.random()*bank.length)];
+        let availableXP = 100;
+        container.innerHTML = `<h2>Syntax Lab</h2><p style="font-size:1.1rem">${p.s.replace('____', '______')}</p><div id="s-wrap"><input type="text" id="s-in" style="padding:10px; width:60%;"> <button class="btn" id="s-sub">Submit</button></div><div id="s-fb"></div>`;
+        document.getElementById('s-sub').onclick = () => {
+            const val = document.getElementById('s-in').value.toUpperCase().trim();
+            if(val === p.a) {
+                updateXP(availableXP, window.innerWidth/2, window.innerHeight/2);
+                container.innerHTML = `<h3 class="correct">VALIDATED! +${availableXP} XP</h3><button class="btn" onclick="startGame('syntax')">Next Sentence</button>`;
+            } else {
+                availableXP = 50;
+                document.getElementById('s-fb').innerHTML = `<p class="wrong">Incorrect. Clue: Starts with "${p.a[0]}".</p>`;
+                document.getElementById('s-in').value = '';
+            }
+        };
+    }
+</script>
+</body>
+</html>

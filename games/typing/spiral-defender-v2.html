@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Steam Defender - Zuma Style</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Georgia', serif;
+      background: linear-gradient(135deg, #1a1510 0%, #2d1e15 100%);
+      color: #d4a574;
+      overflow: hidden;
+      min-height: 100vh;
+    }
+    
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    #header {
+      padding: 15px 20px;
+      background: rgba(0, 0, 0, 0.7);
+      border-bottom: 3px solid #8b6914;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+    
+    #game-canvas {
+      flex: 1;
+      background: radial-gradient(circle at center, #2a1f15 0%, #1a1510 100%);
+      position: relative;
+    }
+    
+    #ui-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 20;
+      pointer-events: none;
+    }
+    
+    .message {
+      font-size: 2.5rem;
+      font-weight: bold;
+      text-shadow: 0 0 20px rgba(212, 165, 116, 0.8);
+      margin-bottom: 20px;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+    
+    .message.show {
+      opacity: 1;
+    }
+    
+    #game-info {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border: 2px solid #8b6914;
+      border-radius: 8px;
+      font-family: monospace;
+      z-index: 5;
+    }
+    
+    #game-info div {
+      margin: 5px 0;
+    }
+    
+    .target-letter {
+      color: #ff6b35;
+      font-weight: bold;
+      font-size: 1.2em;
+    }
+    
+    #cannon {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 80px;
+      background: linear-gradient(180deg, #654321 0%, #3d2817 100%);
+      border: 3px solid #8b6914;
+      border-radius: 5px 5px 0 0;
+      z-index: 5;
+    }
+    
+    #cannon::before {
+      content: '';
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 25px;
+      background: #4a3423;
+      border: 2px solid #8b6914;
+      border-radius: 3px 3px 0 0;
+    }
+    
+    .projectile {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: radial-gradient(circle, #ffcc00 0%, #ff6b35 100%);
+      border: 2px solid #8b6914;
+      border-radius: 50%;
+      box-shadow: 0 0 15px #ff6b35;
+      z-index: 4;
+    }
+    
+    .boss {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 2rem;
+      border: 4px solid #ff0000;
+      background: linear-gradient(135deg, #8b0000, #4a0000);
+      color: #fff;
+      z-index: 6;
+      box-shadow: 0 0 25px rgba(255, 0, 0, 0.6);
+    }
+    
+    .ball {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+      border: 3px solid;
+      color: #fff;
+      cursor: default;
+      z-index: 3;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+    }
+    
+    .ball-letter {
+      pointer-events: none;
+      text-shadow: 0 0 3px rgba(0, 0, 0, 0.9);
+    }
+    
+    .explosion {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 6;
+      animation: explode 0.5s ease-out forwards;
+    }
+    
+    @keyframes explode {
+      0% {
+        transform: scale(0.5);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(2);
+        opacity: 0;
+      }
+    }
+    
+    .spiral-guide {
+      position: absolute;
+      pointer-events: none;
+      opacity: 0.2;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="header">
+      <div>⚙️ STEAM DEFENDER</div>
+      <div>Round: <span id="round-display">1</span></div>
+    </div>
+    
+    <div id="game-canvas">
+      <div id="ui-overlay">
+        <div id="start-message" class="message show">STEAM DEFENDER<br><span style="font-size: 1.2rem">Type the letter of the frontmost ball!</span><br><br><span style="font-size: 1rem">Press SPACE to start</span></div>
+        <div id="victory-message" class="message">ROUND COMPLETE!<br><span id="final-score"></span><br><br><span style="font-size: 1rem">Next round in...</span></div>
+        <div id="game-over-message" class="message">GAME OVER<br><span id="final-score"></span><br><br><span style="font-size: 1rem">Press SPACE to retry</span></div>
+      </div>
+      
+      <div id="game-info">
+        <div>Score: <span id="score">0</span></div>
+        <div>Balls: <span id="balls-remaining">0</span></div>
+        <div>Target: <span id="target-letter" class="target-letter">?</span></div>
+      </div>
+      
+      <div id="cannon"></div>
+    </div>
+  </div>
+  
+  <script>
+    const canvas = document.getElementById('game-canvas');
+    const startMessage = document.getElementById('start-message');
+    const gameOverMessage = document.getElementById('game-over-message');
+    const victoryMessage = document.getElementById('victory-message');
+    const finalScore = document.getElementById('final-score');
+    const scoreDisplay = document.getElementById('score');
+    const roundDisplay = document.getElementById('round-display');
+    const ballsRemainingDisplay = document.getElementById('balls-remaining');
+    const targetDisplay = document.getElementById('target-letter');
+    
+    let gameRunning = false;
+    let round = 1;
+    let score = 0;
+    let balls = []; // Array of balls on the spiral (front is index 0)
+    let bossPosition = 0; // Current position of boss along spiral
+    let projectiles = [];
+    let spawnTimer = 0;
+    let spawnInterval = 2000;
+    let lastTime = 0;
+    let roundTarget = 50;
+    let ballsToSpawn = 0;
+    let ballsSpawned = 0;
+    let bossReachedEnd = false;
+    
+    // Spiral parameters
+    const spiralTurns = 3;
+    const spiralStartRadius = 30;
+    const ballSpacing = 50; // Distance between balls along spiral
+    const maxBalls = 100; // Maximum positions along spiral before game over (increased from 50)
+    
+    // Generate spiral path with discrete positions
+    function generateSpiralPath() {
+      const path = [];
+      const centerX = canvas.clientWidth / 2;
+      const centerY = canvas.clientHeight / 2;
+      
+      // Generate points along spiral - start from center and expand outward
+      const totalSteps = maxBalls;
+      const maxRadius = Math.min(canvas.clientWidth, canvas.clientHeight) / 2 - 25;
+      
+      for (let step = 0; step < totalSteps; step++) {
+        // Calculate angle and radius for this step
+        const angle = step * 0.25; // Wider spacing between turns
+        const progress = step / totalSteps;
+        const radius = spiralStartRadius + (maxRadius - spiralStartRadius) * progress;
+        
+        const x = centerX + radius * Math.cos(angle);
+        const y = centerY + radius * Math.sin(angle);
+        
+        path.push({ x, y });
+      }
+      
+      console.log('Generated spiral path with', path.length, 'points. Center:', centerX, centerY);
+      console.log('First 5 points:', path.slice(0, 5));
+      
+      return path;
+    }
+    
+    const spiralPath = generateSpiralPath();
+    
+    // Draw spiral guide
+    function drawSpiralGuide() {
+      const guide = document.createElement('canvas');
+      guide.className = 'spiral-guide';
+      guide.width = canvas.clientWidth;
+      guide.height = canvas.clientHeight;
+      const ctx = guide.getContext('2d');
+      
+      ctx.strokeStyle = 'rgba(139, 105, 20, 0.3)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      
+      spiralPath.forEach((point, i) => {
+        if (i === 0) ctx.moveTo(point.x, point.y);
+        else ctx.lineTo(point.x, point.y);
+      });
+      
+      ctx.stroke();
+      canvas.appendChild(guide);
+    }
+    
+    drawSpiralGuide();
+    
+    class Boss {
+      constructor() {
+        this.element = this.createElement();
+        this.updatePosition(0);
+      }
+      
+      createElement() {
+        const el = document.createElement('div');
+        el.className = 'boss';
+        el.innerHTML = '👹';
+        canvas.appendChild(el);
+        return el;
+      }
+      
+      updatePosition(posIndex) {
+        if (posIndex >= spiralPath.length) {
+          bossReachedEnd = true;
+          return;
+        }
+        
+        const point = spiralPath[posIndex];
+        this.element.style.left = (point.x - 30) + 'px';
+        this.element.style.top = (point.y - 30) + 'px';
+      }
+    }
+    
+    class Ball {
+      constructor(letter, position) {
+        this.letter = letter;
+        this.position = position; // Position index along spiral
+        this.element = this.createElement();
+        this.updatePosition();
+      }
+      
+      getRandomLetter() {
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        return letters[Math.floor(Math.random() * letters.length)];
+      }
+      
+      createElement() {
+        const el = document.createElement('div');
+        el.className = 'ball';
+        
+        // Random color based on letter
+        const hue = (this.letter.charCodeAt(0) * 23) % 360;
+        el.style.backgroundColor = `hsl(${hue}, 70%, 45%)`;
+        el.style.borderColor = `hsl(${hue}, 80%, 65%)`;
+        
+        const letterEl = document.createElement('span');
+        letterEl.className = 'ball-letter';
+        letterEl.textContent = this.letter;
+        el.appendChild(letterEl);
+        
+        canvas.appendChild(el);
+        return el;
+      }
+      
+      updatePosition() {
+        if (this.position >= spiralPath.length) {
+          this.element.style.display = 'none';
+          return;
+        }
+        
+        const point = spiralPath[this.position];
+        this.element.style.display = 'flex'; // Ensure it's visible
+        this.element.style.left = (point.x - 20) + 'px';
+        this.element.style.top = (point.y - 20) + 'px';
+        
+        // Debug: log position for first few balls
+        if (this.position < 5) {
+          console.log(`Ball at position ${this.position}: (${point.x}, ${point.y})`);
+        }
+      }
+      
+      destroy() {
+        this.element.remove();
+      }
+    }
+    
+    class Projectile {
+      constructor(targetX, targetY) {
+        this.x = canvas.clientWidth / 2;
+        this.y = canvas.clientHeight - 40;
+        this.targetX = targetX;
+        this.targetY = targetY;
+        this.speed = 12;
+        this.element = this.createElement();
+      }
+      
+      createElement() {
+        const el = document.createElement('div');
+        el.className = 'projectile';
+        canvas.appendChild(el);
+        return el;
+      }
+      
+      update() {
+        const dx = this.targetX - this.x;
+        const dy = this.targetY - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < this.speed) {
+          this.element.remove();
+          return 'hit';
+        }
+        
+        const angle = Math.atan2(dy, dx);
+        this.x += Math.cos(angle) * this.speed;
+        this.y += Math.sin(angle) * this.speed;
+        
+        this.element.style.left = (this.x - 6) + 'px';
+        this.element.style.top = (this.y - 6) + 'px';
+        
+        return 'active';
+      }
+    }
+    
+    function createExplosion(x, y, color) {
+      const explosion = document.createElement('div');
+      explosion.className = 'explosion';
+      explosion.style.left = (x - 25) + 'px';
+      explosion.style.top = (y - 25) + 'px';
+      explosion.style.background = `radial-gradient(circle, ${color} 0%, ${color}99 100%)`;
+      
+      canvas.appendChild(explosion);
+      setTimeout(() => explosion.remove(), 500);
+    }
+    
+    function spawnBall() {
+      if (ballsSpawned >= ballsToSpawn) return;
+      
+      // Get a random letter without creating a full ball
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const letter = letters[Math.floor(Math.random() * letters.length)];
+      
+      // Boss moves first, then new ball appears in front of boss
+      bossPosition += 1;
+      if (boss) boss.updatePosition(bossPosition);
+      
+      // Check if boss reached end before spawning ball
+      if (bossPosition >= spiralPath.length - 1) {
+        gameOver();
+        return;
+      }
+      
+      const newPosition = bossPosition + 1;
+      
+      // Debug: log first spawn
+      if (ballsSpawned === 0) {
+        console.log('First spawn: bossPosition=', bossPosition, 'newPosition=', newPosition, 'pathLength=', spiralPath.length);
+      }
+      
+      // Safety check: ensure position is valid
+      if (newPosition >= spiralPath.length) {
+        console.error('Position out of bounds!', newPosition, 'vs', spiralPath.length);
+        return;
+      }
+      
+      // Shift all existing balls forward
+      balls.forEach(ball => {
+        ball.position += 1;
+        ball.updatePosition();
+      });
+      
+      // Add new ball at front
+      const newBall = new Ball(letter, newPosition);
+      balls.unshift(newBall);
+      
+      ballsSpawned++;
+      ballsRemainingDisplay.textContent = balls.length + (ballsToSpawn - ballsSpawned);
+      updateTargetDisplay();
+    }
+    
+    function updateTargetDisplay() {
+      if (balls.length > 0) {
+        targetDisplay.textContent = balls[0].letter;
+      } else {
+        targetDisplay.textContent = '?';
+      }
+    }
+    
+    function handleInput(key) {
+      if (!gameRunning) return;
+      
+      if (balls.length === 0) return;
+      
+      const targetBall = balls[0];
+      
+      if (key.toUpperCase() === targetBall.letter) {
+        // Correct! Fire cannon
+        score += 10;
+        scoreDisplay.textContent = score;
+        
+        // Get target position
+        const point = spiralPath[targetBall.position];
+        
+        // Create projectile
+        const projectile = new Projectile(point.x, point.y);
+        projectiles.push(projectile);
+        
+        // Remove ball after projectile hits
+        setTimeout(() => {
+          if (balls[0] && balls[0].letter === targetBall.letter) {
+            createExplosion(point.x, point.y, balls[0].style.backgroundColor);
+            balls[0].destroy();
+            balls.shift(); // Remove from front
+            ballsRemainingDisplay.textContent = balls.length + (ballsToSpawn - ballsSpawned);
+            updateTargetDisplay();
+            
+            // Check if round is complete
+            if (ballsSpawned >= ballsToSpawn && balls.length === 0) {
+              roundComplete();
+            }
+          }
+        }, 150);
+      } else {
+        // Wrong letter - visual feedback only
+        targetDisplay.style.color = '#ff0000';
+        setTimeout(() => targetDisplay.style.color = '#ff6b35', 200);
+      }
+    }
+    
+    function roundComplete() {
+      gameRunning = false;
+      finalScore.textContent = `Round ${round} Complete! Score: ${score}`;
+      victoryMessage.classList.add('show');
+      
+      setTimeout(() => {
+        round++;
+        startGame();
+      }, 2000);
+    }
+    
+    function gameOver() {
+      gameRunning = false;
+      finalScore.textContent = `Round ${round} - Boss Reached End!`;
+      gameOverMessage.classList.add('show');
+    }
+    
+    function startGame() {
+      // Reset
+      balls.forEach(b => b.destroy());
+      balls = [];
+      projectiles.forEach(p => p.element.remove());
+      projectiles = [];
+      bossPosition = 0;
+      score = 0;
+      spawnTimer = 0;
+      ballsSpawned = 0;
+      bossReachedEnd = false;
+      
+      // Calculate round parameters
+      roundTarget = 50 + (round - 1) * 25;
+      ballsToSpawn = 5 + (round - 1) * 2;
+      spawnInterval = Math.max(1000, 2500 - round * 200);
+      
+      scoreDisplay.textContent = score;
+      ballsRemainingDisplay.textContent = ballsToSpawn;
+      roundDisplay.textContent = round;
+      updateTargetDisplay();
+      
+      startMessage.classList.remove('show');
+      gameOverMessage.classList.remove('show');
+      victoryMessage.classList.remove('show');
+      
+      // Create boss
+      if (!boss) {
+        boss = new Boss();
+      } else {
+        boss.updatePosition(0);
+      }
+      
+      gameRunning = true;
+      lastTime = performance.now();
+      requestAnimationFrame(gameLoop);
+    }
+    
+    let boss;
+    
+    function gameLoop(currentTime) {
+      if (!gameRunning) return;
+      
+      const deltaTime = currentTime - lastTime;
+      lastTime = currentTime;
+      
+      // Spawn balls
+      spawnTimer += deltaTime;
+      if (spawnTimer > spawnInterval && ballsSpawned < ballsToSpawn) {
+        spawnBall();
+        spawnTimer = 0;
+        
+        // Check if boss reached end (already checked in spawnBall, but double-check)
+        if (bossPosition >= spiralPath.length - 1) {
+          gameOver();
+          return;
+        }
+      }
+      
+      // Update projectiles
+      projectiles = projectiles.filter(p => p.update() === 'active');
+      
+      requestAnimationFrame(gameLoop);
+    }
+    
+    // Event listeners
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !gameRunning) {
+        startGame();
+      } else if (gameRunning && e.code.length === 1 && e.key.length === 1) {
+        handleInput(e.key);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# Pages redirects for mistereh.ca
+# Place this file in steam-punk-games/ folder
+
+# Redirect /games/typing → /steam-punk-games/
+/games/typing/* /steam-punk-games/:splat 302
+/games/typing /steam-punk-games/ 302

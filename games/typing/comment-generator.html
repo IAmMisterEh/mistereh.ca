@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning Skills Comment Generator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React and Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        body { background-color: #f8fafc; }
+        .transition-all { transition: all 0.2s ease-in-out; }
+        /* Mobile optimization for touch targets */
+        button { touch-action: manipulation; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- ICONS (Inline for Offline Safety) ---
+        const Icons = {
+            Sparkles: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>,
+            Brain: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.97-3.284"/><path d="M17.97 14.716A4 4 0 0 1 18 18"/></svg>,
+            Copy: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,
+            Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>,
+            ChevronDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
+            Alert: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>,
+            Pending: () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        };
+
+        // --- LOCAL DATA LIBRARY ---
+        
+        const VERB_CONJUGATIONS = {
+            "fulfils": "fulfil",
+            "completes": "complete",
+            "takes": "take",
+            "devises": "devise",
+            "establishes": "establish",
+            "identifies": "identify",
+            "monitors": "monitor",
+            "uses": "use",
+            "follows": "follow",
+            "accepts": "accept",
+            "responds": "respond",
+            "builds": "build",
+            "works": "work",
+            "shares": "share",
+            "looks": "look",
+            "demonstrates": "demonstrate",
+            "approaches": "approach",
+            "recognizes": "recognize",
+            "sets": "set",
+            "seeks": "seek",
+            "assesses": "assess",
+            "perseveres": "persevere"
+        };
+
+        const QUALIFIERS = {
+            "Excellent": ["consistently", "always", "independently", "highly effectively"],
+            "Good": ["usually", "often", "frequently", "effectively"],
+            "Satisfactory": ["sometimes", "occasionally", "with some reminders", "satisfactorily"],
+            "Needs Improvement": ["rarely", "requires support to", "needs reminders to", "struggles to"]
+        };
+
+        const LEARNING_SKILLS_DATA = {
+            Responsibility: [
+                "fulfils responsibilities and commitments within the learning environment",
+                "completes and submits class work, homework, and assignments according to agreed-upon timelines",
+                "takes responsibility for and manages own behaviour"
+            ],
+            Organization: [
+                "devises and follows a plan and process for completing work and tasks",
+                "establishes priorities and manages time to complete tasks and achieve goals",
+                "identifies, gathers, evaluates, and uses information, technology, and resources to complete tasks"
+            ],
+            "Independent Work": [
+                "monitors, assesses, and revises plans to complete tasks and meet goals",
+                "uses class time appropriately to complete tasks",
+                "follows instructions with minimal supervision"
+            ],
+            Collaboration: [
+                "accepts various roles and an equitable share of work in a group",
+                "responds positively to the ideas, opinions, values, and traditions of others",
+                "builds healthy peer-to-peer relationships through personal and media-assisted interactions",
+                "works with others to resolve conflicts and build consensus to achieve group goals",
+                "shares information, resources, and expertise to solve problems and make decisions"
+            ],
+            Initiative: [
+                "looks for and acts on new ideas and opportunities for learning",
+                "demonstrates the capacity for innovation and a willingness to take risks",
+                "demonstrates curiosity and interest in learning",
+                "approaches new tasks with a positive attitude",
+                "recognizes and advocates appropriately for the rights of self and others"
+            ],
+            "Self-regulation": [
+                "sets own individual goals and monitors progress towards achieving them",
+                "seeks clarification or assistance when needed",
+                "assesses and reflects critically on own strengths, needs, and interests",
+                "identifies learning opportunities, choices, and strategies to meet personal needs",
+                "perseveres and makes an effort when responding to challenges"
+            ]
+        };
+
+        const NEXT_STEPS_BANK = {
+            Responsibility: [
+                "is encouraged to take greater ownership of [pronoun_adj] actions without prompts.",
+                "should focus on submitting all assignments by the due date.",
+                "is encouraged to ensure all materials are ready for class each day."
+            ],
+            Organization: [
+                "should continue to use the agenda/calendar to track important dates.",
+                "is encouraged to keep [pronoun_adj] workspace tidy to improve efficiency.",
+                "should focus on prioritizing tasks to avoid last-minute rushing."
+            ],
+            "Independent Work": [
+                "is encouraged to stay focused on the task at hand during independent work blocks.",
+                "should try to solve minor problems independently before seeking help.",
+                "is encouraged to use a checklist to monitor [pronoun_adj] own progress."
+            ],
+            Collaboration: [
+                "is encouraged to listen actively to the ideas of others in group settings.",
+                "should focus on contributing [pronoun_adj] fair share to group projects.",
+                "is encouraged to use positive language when resolving conflicts with peers."
+            ],
+            Initiative: [
+                "is encouraged to seek out new learning challenges voluntarily.",
+                "should try to advocate for [pronoun_obj]self when assistance is needed.",
+                "is encouraged to look for opportunities to help others in the classroom."
+            ],
+            "Self-regulation": [
+                "is encouraged to reflect on [pronoun_adj] learning strategies to identify what works best.",
+                "should focus on goal-setting to improve academic outcomes.",
+                "is encouraged to use calming strategies when facing frustrating challenges."
+            ]
+        };
+
+        const RATING_VALUES = {
+            "Excellent": 4,
+            "Good": 3,
+            "Satisfactory": 2,
+            "Needs Improvement": 1,
+            "NA": 0
+        };
+
+        const App = () => {
+            const [studentName, setStudentName] = useState("");
+            const [pronouns, setPronouns] = useState("he/him");
+            const [selections, setSelections] = useState({});
+            const [results, setResults] = useState({});
+            const [loading, setLoading] = useState(false);
+            const [copied, setCopied] = useState(null);
+            const [activeCategory, setActiveCategory] = useState("Responsibility");
+            const [errorMessage, setErrorMessage] = useState("");
+
+            useEffect(() => {
+                const initial = {};
+                Object.keys(LEARNING_SKILLS_DATA).forEach(cat => {
+                    initial[cat] = {};
+                    LEARNING_SKILLS_DATA[cat].forEach(behavior => {
+                        initial[cat][behavior] = "Satisfactory";
+                    });
+                });
+                setSelections(initial);
+            }, []);
+
+            const getPronouns = () => {
+                const [subj, obj] = pronouns.split('/');
+                let adj = "their";
+                if (subj === "he") adj = "his";
+                if (subj === "she") adj = "her";
+                
+                return {
+                    subj: subj,
+                    obj: obj,
+                    adj: adj,
+                    toBe: subj === "they" ? "are" : "is"
+                };
+            };
+
+            const handleRatingChange = (category, behavior, rating) => {
+                setSelections(prev => ({
+                    ...prev,
+                    [category]: {
+                        ...prev[category],
+                        [behavior]: rating
+                    }
+                }));
+            };
+
+            const calculateSuggestedMark = (category) => {
+                const ratings = Object.values(selections[category] || {});
+                const activeRatings = ratings.filter(r => r !== "NA");
+                if (activeRatings.length === 0) return "N/A";
+
+                const sum = activeRatings.reduce((acc, curr) => acc + RATING_VALUES[curr], 0);
+                const avg = sum / activeRatings.length;
+
+                if (avg >= 3.5) return "Excellent (E)";
+                if (avg >= 2.5) return "Good (G)";
+                if (avg >= 1.5) return "Satisfactory (S)";
+                return "Needs Improvement (N)";
+            };
+
+            const getBaseVerb = (behaviorSentence) => {
+                const firstWord = behaviorSentence.split(" ")[0];
+                return VERB_CONJUGATIONS[firstWord] || firstWord; // Fallback to original if not found
+            };
+
+            const generateComment = (category) => {
+                if (!studentName) {
+                    setErrorMessage("Please enter a student name first.");
+                    setTimeout(() => setErrorMessage(""), 3000);
+                    return;
+                }
+
+                setLoading(true);
+                
+                setTimeout(() => {
+                    try {
+                        const p = getPronouns();
+                        const name = studentName.trim();
+                        const categoryBehaviors = selections[category];
+                        let sentences = [];
+
+                        Object.entries(categoryBehaviors).forEach(([behavior, rating], index) => {
+                            if (rating === "NA") return;
+
+                            const qualifierList = QUALIFIERS[rating];
+                            const qualifier = qualifierList[index % qualifierList.length];
+                            
+                            // Get base verb (e.g., "fulfils" -> "fulfil")
+                            const baseVerb = getBaseVerb(behavior);
+                            const restOfSentence = behavior.substring(behavior.indexOf(" ") + 1);
+                            
+                            let sentence = "";
+
+                            // Logic for grammar construction
+                            if (rating === "Needs Improvement") {
+                                // NI: "He requires support to fulfil..."
+                                // Always use base verb
+                                const subject = index === 0 ? name : (p.subj.charAt(0).toUpperCase() + p.subj.slice(1));
+                                sentence = `${subject} ${qualifier} ${baseVerb} ${restOfSentence}`;
+                            } else {
+                                // Positive ratings
+                                if (p.subj === "they") {
+                                    // They: "They consistently fulfil..." (Base verb)
+                                    const subject = index === 0 ? name : "They";
+                                    sentence = `${subject} ${qualifier} ${baseVerb} ${restOfSentence}`;
+                                } else {
+                                    // He/She/Name: "He consistently fulfils..." (Original verb)
+                                    const subject = index === 0 ? name : (p.subj.charAt(0).toUpperCase() + p.subj.slice(1));
+                                    // Use original verb (ends in 's') from data
+                                    const originalVerb = behavior.split(" ")[0]; 
+                                    sentence = `${subject} ${qualifier} ${originalVerb} ${restOfSentence}`;
+                                }
+                            }
+                            sentences.push(sentence);
+                        });
+
+                        const nextSteps = NEXT_STEPS_BANK[category];
+                        let nextStep = nextSteps[Math.floor(Math.random() * nextSteps.length)];
+                        nextStep = nextStep.replace("[pronoun_adj]", p.adj);
+                        nextStep = nextStep.replace("[pronoun_obj]", p.obj);
+
+                        let finalComment = sentences.join(". ") + ".";
+                        finalComment += ` To improve, ${name} ${nextStep}`;
+                        finalComment = finalComment.replace(/\.\./g, ".");
+
+                        setResults(prev => ({
+                            ...prev,
+                            [category]: finalComment
+                        }));
+                    } catch (err) {
+                        console.error(err);
+                        setErrorMessage("Error generating comment. Please refresh.");
+                    } finally {
+                        setLoading(false);
+                    }
+                }, 400);
+            };
+
+            const copyToClipboard = (text, id) => {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    setCopied(id);
+                    setTimeout(() => setCopied(null), 2000);
+                } catch (err) {
+                    setErrorMessage("Could not copy.");
+                }
+                document.body.removeChild(textArea);
+            };
+
+            const copyAll = () => {
+                const allComments = Object.entries(results)
+                    .map(([cat, text]) => `${cat} (${calculateSuggestedMark(cat)}):\n${text}`)
+                    .join('\n\n');
+                if (!allComments) {
+                    setErrorMessage("No comments generated yet.");
+                    setTimeout(() => setErrorMessage(""), 3000);
+                    return;
+                }
+                copyToClipboard(allComments, 'all');
+            };
+
+            return (
+                <div className="min-h-screen p-4 md:p-6 font-sans text-slate-800 bg-slate-50">
+                    {errorMessage && (
+                        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-full shadow-2xl z-50 flex items-center gap-2 animate-bounce">
+                             <Icons.Alert />
+                            {errorMessage}
+                        </div>
+                    )}
+                    
+                    <header className="max-w-5xl mx-auto mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                        <div>
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="bg-blue-600 p-2 rounded-xl text-white shadow-lg shadow-blue-200">
+                                    <Icons.Brain />
+                                </div>
+                                <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">LS Commenter <span className="text-xs md:text-sm font-normal text-blue-200 bg-blue-800 px-2 py-0.5 rounded-full ml-2 align-middle">OFFLINE V2</span></h1>
+                            </div>
+                            <p className="text-slate-500 font-medium text-sm md:text-base">Smart Ontario Report Card Assistant</p>
+                        </div>
+                        <div className="flex gap-2">
+                            {Object.keys(results).length > 0 && (
+                                <button 
+                                    onClick={copyAll}
+                                    className="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-3 md:py-2 rounded-xl border border-blue-200 hover:bg-blue-100 font-bold transition-all active:scale-95 touch-manipulation"
+                                >
+                                    {copied === 'all' ? <Icons.Check /> : <Icons.Copy />}
+                                    {copied === 'all' ? "Copied!" : "Copy All"}
+                                </button>
+                            )}
+                        </div>
+                    </header>
+
+                    <main className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+                        {/* Control Panel */}
+                        <div className="lg:col-span-7 space-y-6">
+                            <section className="bg-white rounded-3xl shadow-sm border border-slate-200 p-5 md:p-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-slate-400">Student Name</label>
+                                        <input 
+                                            type="text" 
+                                            value={studentName}
+                                            onChange={(e) => setStudentName(e.target.value)}
+                                            placeholder="Student's legal name..."
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-medium"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-slate-400">Pronouns</label>
+                                        <div className="relative">
+                                            <select 
+                                                value={pronouns}
+                                                onChange={(e) => setPronouns(e.target.value)}
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none transition-all appearance-none font-medium"
+                                            >
+                                                <option value="he/him">He/Him</option>
+                                                <option value="she/her">She/Her</option>
+                                                <option value="they/them">They/Them</option>
+                                            </select>
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                                <Icons.ChevronDown />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                                <div className="flex border-b border-slate-100 overflow-x-auto no-scrollbar bg-slate-50/50 p-1">
+                                    {Object.keys(LEARNING_SKILLS_DATA).map(cat => (
+                                        <button
+                                            key={cat}
+                                            onClick={() => setActiveCategory(cat)}
+                                            className={`px-4 py-3 md:px-5 text-sm font-bold whitespace-nowrap rounded-2xl transition-all touch-manipulation ${
+                                                activeCategory === cat 
+                                                ? "text-blue-700 bg-white shadow-sm ring-1 ring-slate-200" 
+                                                : "text-slate-400 hover:text-slate-600"
+                                            }`}
+                                        >
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="p-5 md:p-8">
+                                    <div className="flex justify-between items-center mb-6 md:mb-8">
+                                        <h2 className="text-lg md:text-xl font-extrabold text-slate-900">{activeCategory}</h2>
+                                        <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-black uppercase tracking-tighter">
+                                            {calculateSuggestedMark(activeCategory)}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-6 md:space-y-8">
+                                        {LEARNING_SKILLS_DATA[activeCategory].map((behavior, idx) => (
+                                            <div key={idx} className="space-y-3">
+                                                <p className="text-sm text-slate-700 font-semibold leading-relaxed">{behavior}</p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {["Excellent", "Good", "Satisfactory", "Needs Improvement", "NA"].map(level => (
+                                                        <button
+                                                            key={level}
+                                                            onClick={() => handleRatingChange(activeCategory, behavior, level)}
+                                                            className={`px-3 py-2 md:px-4 rounded-xl text-xs font-bold border-2 transition-all touch-manipulation ${
+                                                                selections[activeCategory]?.[behavior] === level
+                                                                ? "bg-slate-900 text-white border-slate-900 shadow-lg scale-105"
+                                                                : "bg-white text-slate-400 border-slate-100 hover:border-slate-300"
+                                                            }`}
+                                                        >
+                                                            {level === "Needs Improvement" ? "NI" : level}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        onClick={() => generateComment(activeCategory)}
+                                        disabled={loading || !studentName}
+                                        className={`mt-10 w-full py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all touch-manipulation ${
+                                            loading || !studentName
+                                            ? "bg-slate-100 text-slate-300 cursor-not-allowed"
+                                            : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-xl shadow-blue-100"
+                                        }`}
+                                    >
+                                        {loading ? (
+                                            <div className="animate-spin rounded-full h-6 w-6 border-4 border-white border-t-transparent"></div>
+                                        ) : (
+                                            <>
+                                                <Icons.Sparkles />
+                                                Generate Smart Comment
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </section>
+                        </div>
+
+                        {/* Result Panel */}
+                        <div className="lg:col-span-5 space-y-6">
+                            <div className="sticky top-6">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 ml-2">Generated Drafts</h3>
+                                <div className="space-y-4 md:space-y-6">
+                                    {Object.keys(LEARNING_SKILLS_DATA).map(cat => {
+                                        const mark = calculateSuggestedMark(cat);
+                                        const content = results[cat];
+                                        return (
+                                            <div key={cat} className={`group bg-white rounded-3xl shadow-sm border transition-all duration-300 ${content ? "border-blue-200 ring-4 ring-blue-50/50" : "border-slate-100 opacity-40 hover:opacity-100"}`}>
+                                                <div className="p-4 flex justify-between items-center border-b border-slate-50 bg-slate-50/30 rounded-t-3xl">
+                                                    <span className="text-xs font-black text-slate-500 uppercase tracking-tight">{cat}</span>
+                                                    {content && (
+                                                        <button 
+                                                            onClick={() => copyToClipboard(content, cat)} 
+                                                            className="p-2 hover:bg-white rounded-full text-slate-400 hover:text-blue-600 transition-colors shadow-sm touch-manipulation"
+                                                        >
+                                                            {copied === cat ? <Icons.Check /> : <Icons.Copy />}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="p-5">
+                                                    {content ? (
+                                                        <div className="space-y-4">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] font-black bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-100 tracking-tighter uppercase">Mark: {mark}</span>
+                                                            </div>
+                                                            <p className="text-sm leading-relaxed text-slate-600 font-medium italic">"{content}"</p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="py-6 flex flex-col items-center justify-center text-slate-300">
+                                                            <div className="mb-2 opacity-20">
+                                                                <Icons.Pending />
+                                                            </div>
+                                                            <p className="text-[10px] font-bold uppercase tracking-widest">Pending: {mark}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                    
+                    <footer className="max-w-5xl mx-auto mt-20 text-center text-slate-300 py-10 border-t border-slate-100">
+                        <p className="text-xs font-bold uppercase tracking-widest">Ontario Education Tool • Growing Success Compliant</p>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

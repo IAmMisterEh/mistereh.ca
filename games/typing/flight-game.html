@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Hub v12.0 | Inspection Protocol</title>
+    <style>
+        :root {
+            --sky-blue: #0077be;
+            --cockpit-grey: #2c3e50;
+            --safety-orange: #f39c12;
+            --cloud-white: #ecf0f1;
+            --success-green: #27ae60;
+            --danger-red: #c0392b;
+        }
+
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--cloud-white); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        #app-container { width: 98%; max-width: 1150px; background: white; margin: 20px 0; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; position: relative; }
+        
+        .high-score-tag { position: absolute; top: 10px; right: 20px; color: var(--cockpit-grey); font-weight: bold; font-size: 1.1rem; background: #eee; padding: 5px 15px; border-radius: 20px; }
+        
+        .btn { background-color: var(--sky-blue); color: white; border: none; padding: 12px 25px; margin: 8px; font-size: 1rem; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .btn:hover { background-color: var(--cockpit-grey); transform: translateY(-2px); }
+        .hidden { display: none; }
+
+        /* Word Search 20x20 Grid */
+        #word-search-layout { display: flex; flex-wrap: nowrap; gap: 15px; justify-content: center; margin-top: 15px; }
+        #word-search-grid { display: grid; grid-template-columns: repeat(20, 1fr); gap: 1px; width: 600px; background: #999; border: 4px solid var(--cockpit-grey); }
+        .grid-letter { aspect-ratio: 1; background: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; cursor: pointer; user-select: none; border: 1px solid #eee; }
+        .grid-letter.selected { background-color: var(--safety-orange); color: white; }
+        .grid-letter.found { background-color: var(--success-green); color: white; }
+        
+        #clue-list { text-align: left; width: 350px; font-size: 0.75rem; background: #f0f4f8; padding: 10px; border-radius: 10px; max-height: 500px; overflow-y: auto; border: 1px solid #d1d9e6; }
+        .clue-item { margin-bottom: 5px; padding: 5px; border-bottom: 1px solid #ddd; border-left: 4px solid var(--sky-blue); background: white; }
+        .clue-found { text-decoration: line-through; color: #aaa; background: #e8f5e9; border-left-color: var(--success-green); opacity: 0.7; }
+
+        .timer-container { height: 15px; background: #eee; width: 100%; border-radius: 10px; margin-bottom: 15px; overflow: hidden; }
+        .timer-bar { height: 100%; background: linear-gradient(90deg, var(--safety-orange), #d35400); width: 100%; transition: width 0.1s linear; }
+        
+        /* Inspection Mode Styles */
+        .fragment-btn { background: #fff; border: 2px solid var(--sky-blue); padding: 8px 15px; margin: 5px; cursor: pointer; border-radius: 5px; font-size: 1rem; font-weight: bold; transition: 0.2s; color: var(--cockpit-grey); }
+        .fragment-btn:hover { background: var(--sky-blue); color: white; }
+        .reconstructed-box { min-height: 60px; border: 3px dashed var(--sky-blue); margin: 20px; padding: 15px; font-size: 1.3rem; background: #fdfdfd; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 5px; }
+        .match-card { border: 2px solid var(--sky-blue); padding: 10px; margin: 5px; cursor: pointer; background: white; transition: 0.2s; }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div class="high-score-tag">Total Altitude: <span id="session-score">0</span>m</div>
+    <header>
+        <h1 style="color: var(--cockpit-grey);">✈️ Flight Discovery Hub v12.0</h1>
+        <p id="sub-instruction" style="font-weight: bold; color: var(--sky-blue);">Welcome Pilot. Maintain flight discipline.</p>
+    </header>
+
+    <div id="main-menu">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 800px; margin: auto;">
+            <button class="btn" onclick="startGame('quiz')">🛠️ Flight Deck Quiz</button>
+            <button class="btn" onclick="startGame('match')">📦 Hangar Match</button>
+            <button class="btn" onclick="startGame('search')">🔍 Navigator Word Search</button>
+            <button class="btn" onclick="startGame('climb')">📈 Altitude Climb (T/F)</button>
+            <button class="btn" onclick="startGame('fuel')">⛽ Fuel Leak (Scramble)</button>
+            <button class="btn" onclick="startGame('inspect')">🔧 Pre-Flight Inspection</button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div class="timer-container"><div class="timer-bar" id="timer"></div></div>
+        <div id="stats" style="font-size: 1.2rem; font-weight: bold; margin-bottom: 10px;">Session Points: <span id="current-score">0</span>m</div>
+        <div id="content-area"></div>
+        <div id="feedback" class="hidden" style="padding:15px; margin:10px; border-radius:10px; font-weight:bold;"></div>
+        <button class="btn" onclick="showMenu()" style="background: var(--cockpit-grey); width: 200px;">Back to Hangar</button>
+    </div>
+</div>
+
+<script>
+    const rawData = [
+        { term: "THRUST", def: "Forward force that propels an aircraft.", type: "Vocab" },
+        { term: "DRAG", def: "Resistance an object feels moving through fluid.", type: "Vocab" },
+        { term: "LIFT", def: "Force that opposes gravity and lets things fly.", type: "Vocab" },
+        { term: "AVIATION", def: "The design, development, and use of aircraft.", type: "Vocab" },
+        { term: "PITCH", def: "Up/down movement controlled by Elevators.", type: "Vocab" },
+        { term: "ROLL", def: "Tilting side-to-side controlled by Ailerons.", type: "Vocab" },
+        { term: "YAW", def: "Left/right turning controlled by the Rudder.", type: "Vocab" },
+        { term: "AIRFOIL", def: "Specific shape of a wing that creates lift.", type: "Vocab" },
+        { term: "FLUID", def: "Both liquids and gases; anything that flows.", type: "Vocab" },
+        { term: "AERODYNAMICS", def: "The science of moving through the air.", type: "Vocab" },
+        { term: "BERNOULI'S PRINCIPLE", def: "Pressure decreases as fluid speed increases.", type: "Vocab" },
+        { term: "COANDA EFFECT", def: "Fluid flows around an object and sticks to it.", type: "Vocab" },
+        { term: "FRICTION", def: "Force generated when things move against each other.", type: "Vocab" },
+        { term: "GRAVITY", def: "Force pulling everything toward Earth's center.", type: "Vocab" },
+        { term: "ABBAS IBN FIRNAS", def: "9th-century pioneer of controlled flight.", type: "Person" },
+        { term: "SIR GEORGE CAYLEY", def: "Father of Aviation; identified 4 forces.", type: "Person" },
+        { term: "OTTO LILIENTHAL", def: "German 'Glider King' with 2,000+ flights.", type: "Person" },
+        { term: "THE WRIGHT BROTHERS", def: "First powered, controlled flight in 1903.", type: "Person" },
+        { term: "BESSIE COLEMAN", def: "First African American female pilot.", type: "Person" },
+        { term: "AMELIA EARHART", def: "First woman to fly solo across the Atlantic.", type: "Person" },
+        { term: "ELSIE MACGILL", def: "Canadian engineer, 'Queen of the Hurricanes'.", type: "Person" }
+    ];
+
+    let sessionAltitude = 0;
+    let currentGameScore = 0;
+    let timeLeft = 100;
+    let timerInterval = null;
+    let currentMode = '';
+    let selectedMatch = null;
+    let inspectData = { target: "", pool: [], current: [] };
+
+    function startGame(mode) {
+        if(timerInterval) clearInterval(timerInterval);
+        currentMode = mode;
+        currentGameScore = 0;
+        document.getElementById('current-score').innerText = "0";
+        document.getElementById('main-menu').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        document.getElementById('feedback').classList.add('hidden');
+        renderModule();
+    }
+
+    function renderModule() {
+        const area = document.getElementById('content-area');
+        area.innerHTML = '';
+        if(timerInterval) clearInterval(timerInterval);
+        const item = rawData[Math.floor(Math.random() * rawData.length)];
+
+        if (currentMode === 'inspect') {
+            startTimer(60); // Extended timer for this mode
+            inspectData.target = item.def;
+            inspectData.pool = item.def.split(' ').sort(() => 0.5 - Math.random());
+            inspectData.current = [];
+            
+            area.innerHTML = `<h3>RECONSTRUCT DEFINITION: <span style="color:var(--sky-blue)">${item.term}</span></h3>
+                              <div id="re-box" class="reconstructed-box"></div>
+                              <div id="frag-pool" style="margin-bottom:15px;"></div>
+                              <button class="btn" style="background:var(--cockpit-grey)" onclick="resetInspection()">RESET COMPONENTS</button>`;
+            
+            updateInspectionUI();
+        }
+        else if (currentMode === 'quiz') {
+            startTimer(15);
+            const distractors = rawData.filter(d => d.type === item.type && d.term !== item.term).sort(() => 0.5 - Math.random()).slice(0, 3);
+            const choices = [...distractors, item].sort(() => 0.5 - Math.random());
+            area.innerHTML = `<h3>${item.def}</h3>`;
+            choices.forEach(c => {
+                const b = document.createElement('button');
+                b.className = 'btn'; b.innerText = c.term;
+                b.onclick = () => handleResult(c.term === item.term, item.term);
+                area.appendChild(b);
+            });
+        }
+        else if (currentMode === 'climb') {
+            startTimer(8);
+            const isMatch = Math.random() > 0.5;
+            const displayTerm = isMatch ? item.term : rawData.find(x => x.type === item.type && x.term !== item.term).term;
+            area.innerHTML = `<h3>${item.def}</h3><h1 style="color:var(--sky-blue)">${displayTerm}?</h1>
+                              <button class="btn" style="background:var(--success-green)" onclick="handleResult(${isMatch}, 'WRONG')">TRUE</button>
+                              <button class="btn" style="background:var(--danger-red)" onclick="handleResult(${!isMatch}, 'WRONG')">FALSE</button>`;
+        }
+        else if (currentMode === 'fuel') {
+            startTimer(25);
+            const scrambled = item.term.split('').sort(() => 0.5 - Math.random()).join('');
+            area.innerHTML = `<h3>UNSCRAMBLE:</h3><p>${item.def}</p><h1 style="letter-spacing:10px">${scrambled}</h1>
+                              <input type="text" id="scramble-in" style="font-size:1.5rem; width:60%; text-transform:uppercase;">
+                              <button class="btn" onclick="checkScramble('${item.term}')">CHECK</button>`;
+        }
+        else if (currentMode === 'match') {
+            startTimer(60);
+            const set = rawData.sort(() => 0.5 - Math.random()).slice(0, 5);
+            area.innerHTML = `<div style="display:flex; justify-content:space-between;"><div id="terms-col" style="width:45%"></div><div id="defs-col" style="width:45%"></div></div>`;
+            [...set].sort(() => 0.5 - Math.random()).forEach(t => {
+                const d = document.createElement('div'); d.className = 'match-card'; d.innerText = t.term;
+                d.onclick = () => selectMatch(t.term, d, 'term');
+                document.getElementById('terms-col').appendChild(d);
+            });
+            [...set].sort(() => 0.5 - Math.random()).forEach(t => {
+                const d = document.createElement('div'); d.className = 'match-card'; d.innerText = t.def;
+                d.onclick = () => selectMatch(t.term, d, 'def');
+                document.getElementById('defs-col').appendChild(d);
+            });
+        }
+        else if (currentMode === 'search') {
+            startTimer(400);
+            area.innerHTML = `<div id="word-search-layout"><div id="word-search-grid"></div><div id="clue-list"></div></div>`;
+            generateSearchGrid();
+        }
+    }
+
+    function updateInspectionUI() {
+        const poolArea = document.getElementById('frag-pool');
+        const boxArea = document.getElementById('re-box');
+        poolArea.innerHTML = '';
+        boxArea.innerText = inspectData.current.join(' ');
+
+        inspectData.pool.forEach((word, idx) => {
+            const b = document.createElement('button');
+            b.className = 'fragment-btn';
+            b.innerText = word;
+            b.onclick = () => {
+                inspectData.current.push(word);
+                inspectData.pool.splice(idx, 1);
+                updateInspectionUI();
+                if(inspectData.pool.length === 0) {
+                    handleResult(inspectData.current.join(' ') === inspectData.target, inspectData.target);
+                }
+            };
+            poolArea.appendChild(b);
+        });
+    }
+
+    function resetInspection() {
+        // Return current build back to the pool and shuffle
+        inspectData.pool = [...inspectData.pool, ...inspectData.current].sort(() => 0.5 - Math.random());
+        inspectData.current = [];
+        updateInspectionUI();
+    }
+
+    function checkScramble(correct) {
+        const val = document.getElementById('scramble-in').value.toUpperCase().trim();
+        handleResult(val === correct, correct);
+    }
+
+    function startTimer(seconds) {
+        timeLeft = 100;
+        const dec = 10 / seconds;
+        timerInterval = setInterval(() => {
+            timeLeft -= dec;
+            if (timeLeft <= 0) { timeLeft = 0; handleResult(false, "TIME EXPIRED"); }
+            document.getElementById('timer').style.width = timeLeft + "%";
+        }, 100);
+    }
+
+    function handleResult(isCorrect, msg) {
+        if(timerInterval) clearInterval(timerInterval);
+        const fb = document.getElementById('feedback');
+        fb.classList.remove('hidden');
+        if(isCorrect) {
+            addScore(100 + Math.round(timeLeft));
+            fb.style.backgroundColor = 'var(--success-green)'; fb.style.color = 'white';
+            fb.innerText = "✅ SYSTEM CHECK PASSED!";
+        } else {
+            fb.style.backgroundColor = 'var(--danger-red)'; fb.style.color = 'white';
+            fb.innerText = `❌ SYSTEM ERROR! Correct: ${msg}`;
+        }
+        setTimeout(() => { if(currentMode === 'search' && isCorrect) showMenu(); else renderModule(); }, 2500);
+    }
+
+    function selectMatch(val, el, side) {
+        if(!selectedMatch) {
+            selectedMatch = {val, el, side}; el.style.background = 'var(--safety-orange)'; el.style.color = 'white';
+        } else {
+            if(selectedMatch.side !== side && selectedMatch.val === val) {
+                el.style.visibility = 'hidden'; selectedMatch.el.style.visibility = 'hidden';
+                addScore(150);
+                if([...document.querySelectorAll('.match-card')].every(c => c.style.visibility === 'hidden')) handleResult(true, "MATCHED");
+            } else { selectedMatch.el.style.background = 'white'; selectedMatch.el.style.color = 'black'; }
+            selectedMatch = null;
+        }
+    }
+
+    function addScore(pts) {
+        currentGameScore += pts; sessionAltitude += pts;
+        document.getElementById('current-score').innerText = currentGameScore;
+        document.getElementById('session-score').innerText = sessionAltitude;
+    }
+
+    function showMenu() {
+        if(timerInterval) clearInterval(timerInterval);
+        document.getElementById('main-menu').classList.remove('hidden');
+        document.getElementById('game-screen').classList.add('hidden');
+    }
+
+    function generateSearchGrid() {
+        const size = 20;
+        const grid = Array(size * size).fill(null).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26)));
+        const words = [...rawData].sort(() => 0.5 - Math.random()).slice(0, 15);
+        
+        words.forEach(item => {
+            const word = item.term.replace(/[^A-Z]/g, "");
+            let placed = false; let safety = 0;
+            while(!placed && safety < 150) {
+                const horiz = Math.random() > 0.5;
+                const r = Math.floor(Math.random() * (horiz ? size : size - word.length));
+                const c = Math.floor(Math.random() * (horiz ? size - word.length : size));
+                const start = r * size + c;
+                let fit = true;
+                for(let i=0; i<word.length; i++) {
+                    const pos = start + (horiz ? i : i * size);
+                    if(grid[pos].char && grid[pos].char !== word[i]) { fit = false; break; }
+                }
+                if(fit) {
+                    for(let i=0; i<word.length; i++) grid[start + (horiz ? i : i * size)] = {char: word[i], word: word};
+                    placed = true;
+                }
+                safety++;
+            }
+            const cItem = document.createElement('div');
+            cItem.className = 'clue-item'; cItem.id = `clue-${word}`;
+            cItem.innerText = `${item.term}: ${item.def}`;
+            document.getElementById('clue-list').appendChild(cItem);
+        });
+
+        const container = document.getElementById('word-search-grid');
+        grid.forEach((cell, i) => {
+            const div = document.createElement('div');
+            div.className = 'grid-letter'; div.innerText = cell.char || cell;
+            div.onclick = () => {
+                if(div.classList.contains('found')) return;
+                div.classList.toggle('selected');
+                const sel = Array.from(document.querySelectorAll('.grid-letter.selected'));
+                const str = sel.map(s => s.innerText).join('');
+                if(document.getElementById(`clue-${str}`)) {
+                    sel.forEach(s => { s.classList.remove('selected'); s.classList.add('found'); });
+                    document.getElementById(`clue-${str}`).classList.add('clue-found');
+                    addScore(250);
+                    if(document.querySelectorAll('.clue-found').length === 15) handleResult(true, "MISSION COMPLETE");
+                }
+            };
+            container.appendChild(div);
+        });
+    }
+</script>
+</body>
+</html>
