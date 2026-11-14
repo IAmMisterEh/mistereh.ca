@@ -29,9 +29,10 @@ jobs:
     
     - name: 📦 Archive Site Files
       run: |
-        echo "📦 Creating deployment archive..."
-        # Create a zip of all files, excluding unnecessary directories
-        zip -r site.zip . -x "*.git*" "*.github*" "*.venv*" "*.wrangler*" "*.pyc*" "node_modules/*"
+        echo "📦 Creating deployment archive (only tracked files)..."
+        # Use git ls-files to get only tracked files (respects .gitignore)
+        # This ensures only committed files are deployed
+        git ls-files | zip -r site.zip -@
     
     - name: 🚀 Deploy to Cloudflare Pages via API
       env:
