@@ -34,17 +34,18 @@ jobs:
         # This ensures only committed files are deployed
         git ls-files | zip -r site.zip -@
     
-    - name: 🚀 Deploy to Cloudflare Pages via API
+    - name: 🚀 Deploy to Cloudflare Pages via API (Production)
       env:
         CLOUDFLARE_GLOBAL_API_KEY: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
         CLOUDFLARE_ACCOUNT_ID: "a60a4cc516ca31e22aa31f41283edf06"
       run: |
-        echo "🚀 Deploying to Cloudflare Pages with Global API Key..."
+        echo "🚀 Deploying to Cloudflare Pages as PRODUCTION..."
         
-        # Create deployment via API
+        # Create deployment via API with production: true
         RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mistereh-games-auto/deployments" \
           -H "Authorization: Bearer $CLOUDFLARE_GLOBAL_API_KEY" \
           -H "Content-Type: application/zip" \
+          -d '{"branch":"main","production":true}' \
           --data-binary @site.zip)
         
         echo "Deployment response: $RESPONSE"
@@ -53,7 +54,7 @@ jobs:
         if echo "$RESPONSE" | jq -e '.success' > /dev/null 2>&1; then
           DEPLOYMENT_URL=$(echo "$RESPONSE" | jq -r '.result.url // empty')
           if [ -n "$DEPLOYMENT_URL" ]; then
-            echo "✅ Deployment triggered successfully!"
+            echo "✅ Production deployment triggered successfully!"
             echo "Deployment URL: $DEPLOYMENT_URL"
             exit 0
           fi
@@ -69,12 +70,11 @@ jobs:
       run: |
         echo ""
         echo "=========================================="
-        echo "✅ DEPLOYMENT TRIGGERED!"
+        echo "✅ PRODUCTION DEPLOYMENT TRIGGERED!"
         echo "=========================================="
         echo ""
         echo "🌐 mistereh.ca"
         echo "   📍 Live: https://mistereh.ca/"
-        echo "   🎮 Games: https://mistereh.ca/games/"
         echo ""
         echo "📊 Check Cloudflare dashboard for deployment status."
         echo ""
