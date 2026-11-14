@@ -1,2 +1,18 @@
-# Keep old game files local, not deployed
-backup/
+# === DEPLOYED CONTENT ===
+# Everything in this folder (Root) is deployed to Cloudflare *except* what's listed below.
+
+# === LOCAL-ONLY FOLDERS (Never Deployed) ===
+backup/          # Old game files / local backups
+node_modules/    # Dependencies (if we add any)
+.venv/           # Python virtual environments
+
+# === TEMPORARY / EDITOR FILES (Never Deployed) ===
+*.tmp            # Temp files
+*.swp            # Vim swap files
+*~               # Editor backup files
+.DS_Store        # macOS metadata
+Thumbs.db        # Windows metadata
+
+# === LOGS (Local only) ===
+*.log            # Local logs (if any)
+auto-push.log    # Our watcher log (if it somehow ends up in Root)
