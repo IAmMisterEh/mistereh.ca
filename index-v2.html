@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V2: It Is Live Now!!! - mistereh.ca</title>
+    <style>
+        :root {
+            --bg: #00FF00; /* BRIGHT GREEN - EASY TO SPOT */
+            --text: #000;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 800px;
+            padding: 4rem;
+            background: white;
+            border: 5px solid black;
+            box-shadow: 10px 10px 0px black;
+        }
+        h1 {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        p {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            font-weight: bold;
+        }
+        .stamp {
+            background: black;
+            color: white;
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            margin-top: 20px;
+            transform: rotate(-5deg);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>IT IS LIVE NOW!!! (V2)</h1>
+        <p>THIS IS THE NEW GREEN PAGE (INDEX-V2.HTML).</p>
+        <p>If you see this, the pipeline works perfectly.</p>
+        <div class="stamp">VERIFIED: <script>document.write(new Date().toLocaleString())</script></div>
+    </div>
+</body>
+</html>
