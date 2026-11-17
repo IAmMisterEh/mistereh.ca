@@ -1,0 +1,3 @@
+TRIGGER_DEPLOY: 2026-11-17 23:05 UTC
+New Cloudflare API token applied.
+This file forces a new deployment to verify the token works.
