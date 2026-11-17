@@ -36,7 +36,7 @@ jobs:
     
     - name: 🚀 Deploy to Cloudflare Pages via API (Production)
       env:
-        CLOUDFLARE_GLOBAL_API_KEY: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+        CLOUDFLARE_GLOBAL_API_KEY: "${{ secrets.CLOUDFLARE_GLOBAL_KEY }}"
         CLOUDFLARE_ACCOUNT_ID: "a60a4cc516ca31e22aa31f41283edf06"
       run: |
         echo "🚀 Deploying to Cloudflare Pages as PRODUCTION..."
