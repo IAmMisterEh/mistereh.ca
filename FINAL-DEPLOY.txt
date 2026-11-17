@@ -1,0 +1,3 @@
+FINAL_DEPLOY: 2026-11-17 23:22 UTC
+Using Cloudflare Global API Key (cfk_...).
+This file forces a new deployment to verify the Global Key works.
