@@ -39,9 +39,10 @@ jobs:
         CLOUDFLARE_GLOBAL_API_KEY: "${{ secrets.CLOUDFLARE_GLOBAL_KEY }}"
         CLOUDFLARE_ACCOUNT_ID: "a60a4cc516ca31e22aa31f41283edf06"
       run: |
-        echo "🚀 Deploying to Cloudflare Pages as PRODUCTION..."
+        echo "🚀 Deploying to Cloudflare Pages as PRODUCTION to project: mistereh-ca..."
         
         # Create deployment via API with production: true
+        # Force: 2026-11-20 - Fixed project name to mistereh-ca
         RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mistereh-ca/deployments" \
           -H "Authorization: Bearer $CLOUDFLARE_GLOBAL_API_KEY" \
           -H "Content-Type: application/zip" \
