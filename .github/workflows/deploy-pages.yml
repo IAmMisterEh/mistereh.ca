@@ -42,7 +42,7 @@ jobs:
         echo "🚀 Deploying to Cloudflare Pages as PRODUCTION..."
         
         # Create deployment via API with production: true
-        RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mistereh-games-auto/deployments" \
+        RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mistereh-ca/deployments" \
           -H "Authorization: Bearer $CLOUDFLARE_GLOBAL_API_KEY" \
           -H "Content-Type: application/zip" \
           -d '{"branch":"main","production":true}' \
