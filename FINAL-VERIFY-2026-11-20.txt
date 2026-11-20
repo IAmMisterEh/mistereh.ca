@@ -1,0 +1,3 @@
+FINAL_VERIFY: 2026-11-20 21:56 UTC
+This is the *second* trigger file.
+If you see this, the double-commit fix worked!
